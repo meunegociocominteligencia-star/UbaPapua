@@ -1,0 +1,309 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useMemo } from 'react';
+import { Search, Plus, Minus, ShoppingBag, Eye, HelpCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Produto, Categoria, ConfigEstabelecimento } from '../types';
+
+interface CardapioProps {
+  produtos: Produto[];
+  categorias: Categoria[];
+  config: ConfigEstabelecimento;
+  cart: { [id: string]: number };
+  onUpdateCartQuantity: (id: string, qty: number) => void;
+  onOpenCart: () => void;
+  clienteNome: string;
+  clienteQuiosque: string;
+  onLogout: () => void;
+}
+
+export function Cardapio({
+  produtos,
+  categorias,
+  config,
+  cart,
+  onUpdateCartQuantity,
+  onOpenCart,
+  clienteNome,
+  clienteQuiosque,
+  onLogout
+}: CardapioProps) {
+  const [selectedCategory, setSelectedCategory] = useState('Todos');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Count items in cart
+  const cartItemCount = useMemo(() => {
+    return Object.values(cart).reduce((acc, curr) => acc + curr, 0);
+  }, [cart]);
+
+  // Filter products based on search query and category
+  const filteredProdutos = useMemo(() => {
+    return produtos.filter((p) => {
+      const matchesCategory =
+        selectedCategory === 'Todos' || p.categoria === selectedCategory;
+      const matchesSearch =
+        p.nome.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.descricao.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesSearch;
+    });
+  }, [produtos, selectedCategory, searchQuery]);
+
+  return (
+    <div id="client-menu-container" className="min-h-screen bg-[#FDFBF7] pb-32 text-[#1A2E35]">
+      {/* Top Welcome Header Bar */}
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E8E2D9] px-4 py-3.5 shadow-sm">
+        <div className="max-w-4xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-[#F5F2ED] border border-[#E8E2D9] flex items-center justify-center text-xl shadow-sm">
+              {config.logo || '🌊'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] uppercase tracking-widest text-[#A89F91] font-black leading-none">Quiosque</span>
+              <span className="text-xl font-serif italic text-[#0077BE] leading-tight font-bold">{config.nome}</span>
+            </div>
+            <div className="h-6 w-[1px] bg-[#E8E2D9] mx-1 hidden sm:block"></div>
+            <div className="flex flex-col hidden sm:flex">
+              <span className="text-[9px] uppercase tracking-widest text-[#A89F91] font-black leading-none">Mesa / Local</span>
+              <span className="text-sm font-bold text-[#1A2E35] mt-0.5">{clienteQuiosque}</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex flex-col items-end sm:hidden">
+              <span className="text-[9px] uppercase tracking-widest text-[#A89F91] font-black leading-none">Local</span>
+              <span className="text-xs font-bold text-[#1A2E35]">{clienteQuiosque}</span>
+            </div>
+            <button
+              id="change-identification-button"
+              onClick={onLogout}
+              className="text-xs font-bold text-[#5C6B73] hover:text-[#0077BE] transition-colors px-3 py-1.5 rounded-xl hover:bg-[#F5F2ED] border border-transparent hover:border-[#E8E2D9]"
+            >
+              Alterar
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <main className="max-w-4xl mx-auto px-4 mt-6 space-y-6">
+        {/* Banner Card */}
+        <div className="relative rounded-[32px] overflow-hidden bg-[#F5F2ED] border border-[#E8E2D9] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+          <div className="space-y-2 text-center md:text-left">
+            <span className="px-3 py-1 bg-[#0077BE]/10 text-[#0077BE] text-xs font-bold rounded-full border border-[#0077BE]/20 uppercase tracking-widest">
+              Quiosque & Bar de Praia
+            </span>
+            <h1 className="text-2xl md:text-3xl font-serif italic text-[#1A2E35] mt-2">
+              Seu pedido à beira-mar
+            </h1>
+            <p className="text-sm text-[#5C6B73] max-w-md leading-relaxed">
+              Peça porções quentes, cervejas estupidamente geladas e drinks autorais sem sair da sua cadeira.
+            </p>
+          </div>
+          <div className="relative w-28 h-28 flex-shrink-0">
+            {/* Visual illustrative beach representation */}
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#0077BE] to-[#F27D26] rounded-full blur-xl opacity-20 animate-pulse" />
+            <div className="w-full h-full bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center text-5xl shadow-sm">
+              🍹
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Search */}
+        <div className="relative">
+          <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-[#A89F91] pointer-events-none">
+            <Search className="h-5 w-5 text-[#0077BE]" />
+          </span>
+          <input
+            id="product-search-input"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Pesquisar água de coco, batata frita, caipirinha..."
+            className="w-full pl-12 pr-4 py-3.5 bg-white border border-[#E8E2D9] rounded-full text-[#1A2E35] placeholder-[#A89F91] focus:outline-none focus:border-[#0077BE] focus:ring-1 focus:ring-[#0077BE] transition-all font-medium shadow-sm"
+          />
+        </div>
+
+        {/* Categories Horizontal Carousel */}
+        <div className="space-y-2">
+          <h3 className="text-xs font-bold text-[#A89F91] uppercase tracking-[0.15em] pl-1">
+            Categorias do Cardápio
+          </h3>
+          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x -mx-4 px-4">
+            <button
+              onClick={() => setSelectedCategory('Todos')}
+              className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer snap-start ${
+                selectedCategory === 'Todos'
+                  ? 'bg-[#0077BE] text-white shadow-lg shadow-blue-100'
+                  : 'bg-transparent border border-[#E8E2D9] hover:bg-white text-[#5C6B73] hover:text-[#1A2E35]'
+              }`}
+            >
+              Todos os Itens
+            </button>
+            {categorias.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => setSelectedCategory(cat.nome)}
+                className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer snap-start ${
+                  selectedCategory === cat.nome
+                    ? 'bg-[#0077BE] text-white shadow-lg shadow-blue-100'
+                    : 'bg-transparent border border-[#E8E2D9] hover:bg-white text-[#5C6B73] hover:text-[#1A2E35]'
+                }`}
+              >
+                {cat.nome}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <AnimatePresence mode="popLayout">
+            {filteredProdutos.map((prod) => {
+              const qtyInCart = cart[prod.id] || 0;
+              return (
+                <motion.div
+                  key={prod.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white p-4 rounded-[32px] shadow-sm hover:shadow-xl transition-all border border-transparent hover:border-[#0077BE] flex flex-col justify-between group"
+                >
+                  <div className="flex p-1 gap-4">
+                    {/* Lazy-loaded-style premium card Image */}
+                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-[24px] overflow-hidden bg-[#F5F2ED] border border-[#E8E2D9] flex-shrink-0 relative">
+                      <img
+                        src={prod.imagem}
+                        alt={prod.nome}
+                        referrerPolicy="no-referrer"
+                        className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
+                          !prod.ativo ? 'opacity-40 grayscale' : ''
+                        }`}
+                      />
+                      {!prod.ativo && (
+                        <div className="absolute inset-0 bg-white/85 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
+                            Esgotado
+                          </span>
+                        </div>
+                      )}
+                      {qtyInCart > 0 && prod.ativo && (
+                        <div className="absolute top-1 right-1 bg-[#0077BE] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                          {qtyInCart}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0 flex flex-col justify-between">
+                      <div>
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-[9px] font-bold text-[#0077BE] uppercase tracking-wider">
+                            {prod.categoria}
+                          </span>
+                        </div>
+                        <h4 className="text-base font-bold text-[#1A2E35] mt-0.5 group-hover:text-[#0077BE] transition-colors truncate">
+                          {prod.nome}
+                        </h4>
+                        <p className="text-xs text-[#5C6B73] mt-1 line-clamp-2 font-medium leading-relaxed">
+                          {prod.descricao}
+                        </p>
+                      </div>
+
+                      <div className="mt-2 flex items-baseline justify-between gap-2">
+                        <span className="text-lg font-extrabold text-[#0077BE]">
+                          R$ {prod.preco.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quantity controls / Action button footer */}
+                  <div className="px-2 pb-2 pt-2 border-t border-[#F5F2ED] flex items-center justify-end mt-4 bg-transparent">
+                    {!prod.ativo ? (
+                      <button
+                        disabled
+                        className="w-full text-xs font-semibold text-[#A89F91] text-center py-2.5 bg-[#F5F2ED] rounded-xl"
+                      >
+                        Indisponível no Momento
+                      </button>
+                    ) : qtyInCart > 0 ? (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => onUpdateCartQuantity(prod.id, qtyInCart - 1)}
+                          className="w-8 h-8 rounded-xl bg-[#F5F2ED] border border-[#E8E2D9] flex items-center justify-center text-[#5C6B73] hover:text-[#1A2E35] hover:bg-[#E8E2D9] transition-all cursor-pointer"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="text-sm font-extrabold w-6 text-center text-[#1A2E35]">
+                          {qtyInCart}
+                        </span>
+                        <button
+                          onClick={() => onUpdateCartQuantity(prod.id, qtyInCart + 1)}
+                          className="w-8 h-8 rounded-xl bg-[#0077BE] text-white flex items-center justify-center hover:bg-opacity-90 transition-all cursor-pointer shadow-md shadow-blue-100"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => onUpdateCartQuantity(prod.id, 1)}
+                        className="w-full py-3 rounded-2xl bg-[#F5F2ED] hover:bg-[#0077BE] hover:text-white transition-colors font-bold text-sm text-[#0077BE] flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Adicionar</span>
+                      </button>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+
+          {filteredProdutos.length === 0 && (
+            <div className="col-span-1 md:col-span-2 py-16 text-center space-y-3 bg-white border border-[#E8E2D9] rounded-[32px] p-8 shadow-sm">
+              <div className="text-5xl">🥥</div>
+              <h4 className="text-base font-bold text-[#1A2E35]">Nenhum item encontrado</h4>
+              <p className="text-xs text-[#5C6B73] max-w-xs mx-auto">
+                Tente redefinir a busca ou selecione outra categoria. Estamos abastecidos com águas frescas e ótimos petiscos!
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* Floating Cart Button (At the bottom, persistent) */}
+      {cartItemCount > 0 && (
+        <div className="fixed bottom-20 left-0 right-0 z-40 px-4">
+          <div className="max-w-md mx-auto">
+            <button
+              id="view-cart-floating-button"
+              onClick={onOpenCart}
+              className="w-full bg-[#0077BE] text-white font-extrabold rounded-2xl py-4 px-6 flex items-center justify-between shadow-xl shadow-blue-200 cursor-pointer hover:bg-opacity-95 active:scale-[0.99] transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <ShoppingBag className="h-5 w-5 text-white" />
+                  <span className="absolute -top-2 -right-2.5 bg-[#F27D26] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border border-white shadow-md">
+                    {cartItemCount}
+                  </span>
+                </div>
+                <span>Ver Sacola de Pedidos</span>
+              </div>
+              <span className="text-sm bg-white/15 py-1 px-3 rounded-lg">
+                R$ {Object.entries(cart).reduce((total, [prodId, qty]) => {
+                  const product = produtos.find((p) => p.id === prodId);
+                  return total + (product ? product.preco * Number(qty) : 0);
+                }, 0).toFixed(2)}
+              </span>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

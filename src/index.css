@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..800;1,400..800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-serif: "Playfair Display", Georgia, serif;
+}
+
+/* Custom scrollbar matching the beach sand & ocean blue theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #F5F2ED;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 119, 190, 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 119, 190, 0.6);
+}
+
+/* Base styles */
+body {
+  font-family: var(--font-sans);
+  background-color: #FDFBF7;
+  color: #1A2E35;
+  -webkit-tap-highlight-color: transparent;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+}
+
+/* Delicate borders and artistic sand dividers */
+.border-sand {
+  border-color: #E8E2D9;
+}
+
+.bg-sand-light {
+  background-color: #FDFBF7;
+}
+
+.bg-sand-medium {
+  background-color: #F5F2ED;
+}
+
+.bg-sand-dark {
+  background-color: #F2EDE4;
+}
+
+.text-navy {
+  color: #1A2E35;
+}
+
+.text-slate-muted {
+  color: #5C6B73;
+}
+
+.text-ocean {
+  color: #0077BE;
+}
+
+.bg-ocean {
+  background-color: #0077BE;
+}
+
+/* Subtle water reflection visual accent */
+.artistic-glow {
+  position: relative;
+}
+.artistic-glow::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 24px 0 rgba(0, 119, 190, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+}
+.artistic-glow:hover::after {
+  opacity: 1;
+}

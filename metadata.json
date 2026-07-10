@@ -1,0 +1,6 @@
+{
+  "name": "Beach Kiosk Ordering System",
+  "description": "A complete, modern, offline-first digital menu and order management system for beach kiosks and bars.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
