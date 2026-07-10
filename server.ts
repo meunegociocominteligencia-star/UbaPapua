@@ -9,14 +9,364 @@ import { createServer as createViteServer } from 'vite';
 
 // Server-authoritative in-memory state (resets on server restart, synced on client IndexedDB)
 let categorias = [
-  { id: '1', nome: 'Bebidas' },
-  { id: '2', nome: 'Drinks' },
-  { id: '3', nome: 'Porções' },
-  { id: '4', nome: 'Lanches' },
-  { id: '5', nome: 'Sobremesas' }
+  { id: '1', nome: 'Refeições' },
+  { id: '2', nome: 'Prato Regional' },
+  { id: '3', nome: 'Petisco' },
+  { id: '4', nome: 'Não Alcoólicos' },
+  { id: '5', nome: 'Drinks' },
+  { id: '6', nome: 'Bebidas' }
 ];
 
 let produtos = [
+  // --- REFEIÇÕES (Serve 02 pessoas) ---
+  {
+    id: 'r1',
+    nome: 'Dourada (Refeição p/ 2)',
+    descricao: 'Tradicional Dourada assada ou frita, servida bem quente com acompanhamentos regionais. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 65.00,
+    imagem: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 1
+  },
+  {
+    id: 'r2',
+    nome: 'Pirarucu (Refeição p/ 2)',
+    descricao: 'O gigante da Amazônia grelhado ou frito, macio e saboroso com acompanhamentos. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 80.00,
+    imagem: 'https://images.unsplash.com/photo-1559847844-5315685d8cb6?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 2
+  },
+  {
+    id: 'r3',
+    nome: 'Filé de Gó (Refeição p/ 2)',
+    descricao: 'Filé do peixe Gó preparado na chapa ou frito, perfeito para saborear em dupla. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 65.00,
+    imagem: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 3
+  },
+  {
+    id: 'r4',
+    nome: 'Filhote (Refeição p/ 2)',
+    descricao: 'Nobre e suculento filhote preparado com carinho, servido com arroz, vinagrete e farofa. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 65.00,
+    imagem: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 4
+  },
+  {
+    id: 'r5',
+    nome: 'Pescada (Refeição p/ 2)',
+    descricao: 'Pescada fresca dourada na chapa ou frita, muito saborosa. Acompanha arroz, farofa e vinagrete. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 65.00,
+    imagem: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 5
+  },
+  {
+    id: 'r6',
+    nome: 'Bisteca Bovina (Boi) (Refeição p/ 2)',
+    descricao: 'Generosa bisteca bovina grelhada na brasa, macia e suculenta com acompanhamentos. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 65.00,
+    imagem: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 6
+  },
+  {
+    id: 'r7',
+    nome: 'Filé de Dourada (Refeição p/ 2)',
+    descricao: 'Nobre filé de dourada limpo, grelhado com azeite de oliva e servido com acompanhamentos finos. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 80.00,
+    imagem: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 7
+  },
+  {
+    id: 'r8',
+    nome: 'Filé de Carne (Refeição p/ 2)',
+    descricao: 'Delicioso filé de carne grelhado ao ponto do cliente, guarnecido de acompanhamentos. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 80.00,
+    imagem: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 8
+  },
+  {
+    id: 'r9',
+    nome: 'Frango Frito (Refeição p/ 2)',
+    descricao: 'Pedaços selecionados de frango crocantes por fora e macios por dentro, acompanhados de fritas ou arroz. Serve 2 pessoas.',
+    categoria: 'Refeições',
+    preco: 65.00,
+    imagem: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 9
+  },
+
+  // --- PRATO REGIONAL ---
+  {
+    id: 'pr1',
+    nome: 'Dourada (Prato Regional)',
+    descricao: 'Prato individual de dourada fresca grelhada com arroz branco, feijão regional e farinha d\'água.',
+    categoria: 'Prato Regional',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 10
+  },
+  {
+    id: 'pr2',
+    nome: 'Pirarucu (Prato Regional)',
+    descricao: 'Delicioso pirarucu grelhado, acompanhado de arroz, feijão e farofa crocante.',
+    categoria: 'Prato Regional',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1559847844-5315685d8cb6?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 11
+  },
+  {
+    id: 'pr3',
+    nome: 'Filé de Gó (Prato Regional)',
+    descricao: 'Delicado filé de Gó servido com guarnições regionais quentes.',
+    categoria: 'Prato Regional',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 12
+  },
+  {
+    id: 'pr4',
+    nome: 'Bisteca Bovina (Prato Regional)',
+    descricao: 'Corte saboroso de bisteca grelhada na chapa com acompanhamentos tradicionais.',
+    categoria: 'Prato Regional',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 13
+  },
+  {
+    id: 'pr5',
+    nome: 'Filé de Carne (Prato Regional)',
+    descricao: 'Filé bovino grelhado individual, servido com arroz, feijão e farofa.',
+    categoria: 'Prato Regional',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 14
+  },
+  {
+    id: 'pr6',
+    nome: 'Frango (Prato Regional)',
+    descricao: 'Frango grelhado ou frito individual, servido quentinho com guarnições regionais.',
+    categoria: 'Prato Regional',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 15
+  },
+
+  // --- PETISCO ---
+  {
+    id: 'pe1',
+    nome: 'Azeitona',
+    descricao: 'Porção de azeitonas verdes temperadas com azeite de oliva e orégano.',
+    categoria: 'Petisco',
+    preco: 20.00,
+    imagem: 'https://images.unsplash.com/photo-1541432901042-2d8bd64b4a9b?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 16
+  },
+  {
+    id: 'pe2',
+    nome: 'Macaxeira Frita',
+    descricao: 'Porção de macaxeira (mandioca) frita, dourada e muito crocante.',
+    categoria: 'Petisco',
+    preco: 25.00,
+    imagem: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 17
+  },
+  {
+    id: 'pe3',
+    nome: 'Queijo Coalho',
+    descricao: 'Deliciosos cubos ou espetos de queijo coalho grelhados na chapa.',
+    categoria: 'Petisco',
+    preco: 25.00,
+    imagem: 'https://images.unsplash.com/photo-1552763442-159ac9a24dce?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 18
+  },
+  {
+    id: 'pe4',
+    nome: 'Isca de Peixe',
+    descricao: 'Deliciosas iscas de peixe local empanadas e fritas. Acompanha molho tártaro ou limão.',
+    categoria: 'Petisco',
+    preco: 50.00,
+    imagem: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 19
+  },
+  {
+    id: 'pe5',
+    nome: 'Calabresa',
+    descricao: 'Porção de calabresa acebolada frita, ideal para acompanhar uma bebida bem gelada.',
+    categoria: 'Petisco',
+    preco: 30.00,
+    imagem: 'https://images.unsplash.com/photo-1541518763669-27fef04b14ea?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 20
+  },
+  {
+    id: 'pe6',
+    nome: 'Batata Frita',
+    descricao: 'Porção de batatas fritas crocantes com sal.',
+    categoria: 'Petisco',
+    preco: 25.00,
+    imagem: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 21
+  },
+  {
+    id: 'pe7',
+    nome: 'Petisco: 02 Opções',
+    descricao: 'Monte seu prato de petiscos escolhendo duas opções da casa.',
+    categoria: 'Petisco',
+    preco: 40.00,
+    imagem: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 22
+  },
+  {
+    id: 'pe8',
+    nome: 'Petisco: 03 Opções',
+    descricao: 'Monte seu prato de petiscos escolhendo três opções da casa.',
+    categoria: 'Petisco',
+    preco: 50.00,
+    imagem: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 23
+  },
+
+  // --- NÃO ALCOÓLICOS ---
+  {
+    id: 'na1',
+    nome: 'Coca-Cola 2L',
+    descricao: 'Garrafa pet de 2 Litros, bem gelada para toda a mesa.',
+    categoria: 'Não Alcoólicos',
+    preco: 14.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 24
+  },
+  {
+    id: 'na2',
+    nome: 'Coca-Cola 1L',
+    descricao: 'Garrafa pet de 1 Litro, ideal para dividir.',
+    categoria: 'Não Alcoólicos',
+    preco: 9.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 25
+  },
+  {
+    id: 'na3',
+    nome: 'Coca-Cola 600ml',
+    descricao: 'Tamanho perfeito para matar a sua sede individual.',
+    categoria: 'Não Alcoólicos',
+    preco: 8.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 26
+  },
+  {
+    id: 'na4',
+    nome: 'Fanta Laranja 2L',
+    descricao: 'Garrafa pet de 2 Litros gelada.',
+    categoria: 'Não Alcoólicos',
+    preco: 12.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 27
+  },
+  {
+    id: 'na5',
+    nome: 'Fanta Laranja 1L',
+    descricao: 'Garrafa pet de 1 Litro gelada.',
+    categoria: 'Não Alcoólicos',
+    preco: 8.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 28
+  },
+  {
+    id: 'na6',
+    nome: 'Pepsi 2L',
+    descricao: 'Garrafa pet de 2 Litros gelada.',
+    categoria: 'Não Alcoólicos',
+    preco: 12.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 29
+  },
+  {
+    id: 'na7',
+    nome: 'Tuchaua 2L',
+    descricao: 'O refrigerante sabor guaraná mais tradicional da região norte. Garrafa pet 2L.',
+    categoria: 'Não Alcoólicos',
+    preco: 12.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 30
+  },
+  {
+    id: 'na8',
+    nome: 'Tuchaua 1L',
+    descricao: 'Refrigerante guaraná regional do norte. Garrafa pet 1L.',
+    categoria: 'Não Alcoólicos',
+    preco: 8.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 31
+  },
+  {
+    id: 'na9',
+    nome: 'Sukita 2L',
+    descricao: 'Refrigerante Sukita de laranja, garrafa pet de 2 Litros.',
+    categoria: 'Não Alcoólicos',
+    preco: 12.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 32
+  },
+  {
+    id: 'na10',
+    nome: 'Sukita 1L',
+    descricao: 'Refrigerante Sukita de laranja, garrafa pet de 1 Litro.',
+    categoria: 'Não Alcoólicos',
+    preco: 8.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 33
+  },
+  {
+    id: 'na11',
+    nome: 'Refrigerante Lata',
+    descricao: 'Refrigerante em lata (Coca-Cola, Fanta, Guaraná, Sukita). Escolha o sabor com o atendente.',
+    categoria: 'Não Alcoólicos',
+    preco: 6.00,
+    imagem: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=600&auto=format&fit=crop&q=80',
+    ativo: true,
+    ordem: 34
+  },
+
+  // --- EXTRAS BEBIDAS & DRINKS ---
   {
     id: 'p1',
     nome: 'Água de Coco Natural',
@@ -25,7 +375,7 @@ let produtos = [
     preco: 10.00,
     imagem: 'https://images.unsplash.com/photo-1525385133375-80955641da08?w=600&auto=format&fit=crop&q=80',
     ativo: true,
-    ordem: 1
+    ordem: 35
   },
   {
     id: 'p2',
@@ -35,27 +385,7 @@ let produtos = [
     preco: 22.00,
     imagem: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80',
     ativo: true,
-    ordem: 2
-  },
-  {
-    id: 'p3',
-    nome: 'Porção Isca de Peixe Crocante',
-    descricao: 'Filé de pescada em tiras, empanado na farinha panko. Acompanha molho tártaro.',
-    categoria: 'Porções',
-    preco: 65.00,
-    imagem: 'https://images.unsplash.com/photo-1534604973900-c43ab4c2e0ab?w=600&auto=format&fit=crop&q=80',
-    ativo: true,
-    ordem: 3
-  },
-  {
-    id: 'p4',
-    nome: 'Camarão ao Alho e Óleo',
-    descricao: 'Camarões médios grelhados com bastante alho dourado e azeite extra virgem.',
-    categoria: 'Porções',
-    preco: 85.00,
-    imagem: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=600&auto=format&fit=crop&q=80',
-    ativo: true,
-    ordem: 4
+    ordem: 36
   },
   {
     id: 'p5',
@@ -65,7 +395,7 @@ let produtos = [
     preco: 12.00,
     imagem: 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=600&auto=format&fit=crop&q=80',
     ativo: true,
-    ordem: 5
+    ordem: 37
   },
   {
     id: 'p6',
@@ -75,38 +405,18 @@ let produtos = [
     preco: 28.00,
     imagem: 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=600&auto=format&fit=crop&q=80',
     ativo: true,
-    ordem: 6
-  },
-  {
-    id: 'p7',
-    nome: 'Hambúrguer Classic Beach',
-    descricao: 'Blend bovino 150g grelhado no fogo, queijo prato derretido, alface, tomate e maionese verde artesanal.',
-    categoria: 'Lanches',
-    preco: 32.00,
-    imagem: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80',
-    ativo: true,
-    ordem: 7
-  },
-  {
-    id: 'p8',
-    nome: 'Açai Completo na Tigela (500ml)',
-    descricao: 'Acompanha banana fatiada, morango fresco, leite condensado, leite em pó e granola crocante.',
-    categoria: 'Sobremesas',
-    preco: 24.00,
-    imagem: 'https://images.unsplash.com/photo-1590301157890-4810ed352733?w=600&auto=format&fit=crop&q=80',
-    ativo: true,
-    ordem: 8
+    ordem: 38
   }
 ];
 
 let config = {
-  nome: 'Quiosque Bella Costa',
-  logo: '🌊',
-  telefone: '(11) 99999-8888',
-  endereco: 'Av. Beira Mar, Quiosque 42 - Praia Central, Ubatuba/SP',
+  nome: 'Ubá Papuá',
+  logo: '🌴',
+  telefone: '(91) 98765-4321',
+  endereco: 'Orla de Belém, Quiosque Ubá Papuá - Belém/PA',
   taxa_servico: 10,
-  mensagem_inicial: 'Bem-vindo ao Bella Costa! Desfrute de momentos inesquecíveis à beira-mar. Faça seu pedido diretamente por aqui!',
-  horario_funcionamento: 'Todos os dias, das 08h às 20h'
+  mensagem_inicial: 'Bem-vindo ao Ubá Papuá! Saboreie o melhor da culinária regional e petiscos deliciosos à beira-rio. Faça seu pedido diretamente aqui!',
+  horario_funcionamento: 'Terça a Domingo, das 11h às 22h'
 };
 
 // Initial demo orders for gorgeous UI state

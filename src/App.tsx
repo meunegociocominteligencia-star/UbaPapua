@@ -23,6 +23,23 @@ interface ToastMessage {
   type: 'success' | 'info' | 'warning' | 'error';
 }
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function isValidUUID(str: string): boolean {
+  if (!str) return false;
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return regex.test(str);
+}
+
 export default function App() {
   // Session / Router state
   const [clienteNome, setClienteNome] = useState<string | null>(
@@ -289,43 +306,55 @@ export default function App() {
       const realSupabase = getSupabase();
 
       for (const order of pendingList) {
+        let syncedSuccessfully = false;
+
         if (realSupabase && hasSupabaseConfig) {
-          // Push to Supabase
-          const { data: newOrder, error: orderErr } = await realSupabase
-            .from('pedidos')
-            .insert({
-              id: order.id,
-              cliente_nome: order.cliente_nome,
-              quiosque: order.quiosque,
-              status: order.status,
-              valor_total: order.valor_total,
-              taxa_servico: order.taxa_servico,
-              valor_final: order.valor_final,
-              observacoes: order.observacoes,
-              created_at: order.created_at
-            })
-            .select()
-            .single();
+          try {
+            const orderId = isValidUUID(order.id) ? order.id : generateUUID();
+            // Push to Supabase
+            const { error: orderErr } = await realSupabase
+              .from('pedidos')
+              .insert({
+                id: orderId,
+                cliente_nome: order.cliente_nome,
+                quiosque: order.quiosque,
+                status: order.status,
+                valor_total: order.valor_total,
+                taxa_servico: order.taxa_servico,
+                valor_final: order.valor_final,
+                observacoes: order.observacoes,
+                created_at: order.created_at
+              });
 
-          if (orderErr) throw orderErr;
+            if (orderErr) throw orderErr;
 
-          const itemsToInsert = order.itens.map((it) => ({
-            pedido_id: order.id,
-            produto_id: it.produto_id,
-            produto_nome: it.produto_nome,
-            quantidade: it.quantidade,
-            valor: it.valor
-          }));
+            const itemsToInsert = order.itens.map((it) => ({
+              pedido_id: orderId,
+              produto_id: it.produto_id,
+              produto_nome: it.produto_nome,
+              quantidade: it.quantidade,
+              valor: it.valor
+            }));
 
-          const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
-          if (itemsErr) throw itemsErr;
-        } else {
+            const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
+            if (itemsErr) throw itemsErr;
+
+            syncedSuccessfully = true;
+          } catch (supabaseErr) {
+            console.error('Supabase sync failed for order', order.id, supabaseErr);
+          }
+        }
+
+        if (!syncedSuccessfully) {
           // Push to Express Server Mock Database
-          await fetch('/api/orders', {
+          const res = await fetch('/api/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(order)
           });
+          if (!res.ok) {
+            throw new Error(`Express server order submission failed with status ${res.status}`);
+          }
         }
 
         // Remove from offline queue and mark as synced in historico
@@ -408,7 +437,7 @@ export default function App() {
       .filter((it) => Number(it.quantidade) > 0);
 
     const newOrder: Pedido = {
-      id: 'o_' + Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       cliente_nome: clienteNome || 'Cliente Anônimo',
       quiosque: clienteQuiosque || 'Quiosque',
       status: 'Recebido',
@@ -434,37 +463,51 @@ export default function App() {
       // Connect and send to real-time database or server API
       try {
         const realSupabase = getSupabase();
+        let syncedSuccessfully = false;
+
         if (realSupabase && hasSupabaseConfig) {
-          const { error: ordErr } = await realSupabase.from('pedidos').insert({
-            id: newOrder.id,
-            cliente_nome: newOrder.cliente_nome,
-            quiosque: newOrder.quiosque,
-            status: newOrder.status,
-            valor_total: newOrder.valor_total,
-            taxa_servico: newOrder.taxa_servico,
-            valor_final: newOrder.valor_final,
-            observacoes: newOrder.observacoes,
-            created_at: newOrder.created_at
-          });
-          if (ordErr) throw ordErr;
+          try {
+            const orderId = isValidUUID(newOrder.id) ? newOrder.id : generateUUID();
+            const { error: ordErr } = await realSupabase.from('pedidos').insert({
+              id: orderId,
+              cliente_nome: newOrder.cliente_nome,
+              quiosque: newOrder.quiosque,
+              status: newOrder.status,
+              valor_total: newOrder.valor_total,
+              taxa_servico: newOrder.taxa_servico,
+              valor_final: newOrder.valor_final,
+              observacoes: newOrder.observacoes,
+              created_at: newOrder.created_at
+            });
+            if (ordErr) throw ordErr;
 
-          const itemsToInsert = newOrder.itens.map((it) => ({
-            pedido_id: newOrder.id,
-            produto_id: it.produto_id,
-            produto_nome: it.produto_nome,
-            quantidade: it.quantidade,
-            valor: it.valor
-          }));
+            const itemsToInsert = newOrder.itens.map((it) => ({
+              pedido_id: orderId,
+              produto_id: it.produto_id,
+              produto_nome: it.produto_nome,
+              quantidade: it.quantidade,
+              valor: it.valor
+            }));
 
-          const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
-          if (itemsErr) throw itemsErr;
-        } else {
+            const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
+            if (itemsErr) throw itemsErr;
+
+            syncedSuccessfully = true;
+          } catch (supabaseErr) {
+            console.error('Failed to submit to Supabase, falling back to Express:', supabaseErr);
+          }
+        }
+
+        if (!syncedSuccessfully) {
           // Express Post
-          await fetch('/api/orders', {
+          const res = await fetch('/api/orders', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newOrder)
           });
+          if (!res.ok) {
+            throw new Error(`Express server order submission failed with status ${res.status}`);
+          }
         }
         showToast('Pedido enviado para a cozinha com sucesso!', 'success');
       } catch (err) {

@@ -24,9 +24,30 @@ import {
   Percent,
   MapPin,
   Phone,
-  MessageSquare
+  MessageSquare,
+  Upload,
+  Image as ImageIcon,
+  BarChart3,
+  PieChart as PieIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  Cell,
+  PieChart,
+  Pie,
+  AreaChart,
+  Area
+} from 'recharts';
 import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus } from '../types';
 import { SUPABASE_SQL_SETUP, hasSupabaseConfig } from '../lib/supabase';
 
@@ -63,7 +84,9 @@ export function AdminPanel({
   onClose,
   supabaseStatus
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports'>('orders');
+  const [prodPeriod, setProdPeriod] = useState<'today' | '7days' | '30days' | 'all'>('all');
+  const [revenuePeriod, setRevenuePeriod] = useState<'daily' | 'monthly' | 'annual'>('daily');
 
   // Dashboard Stats
   const stats = useMemo(() => {
@@ -95,6 +118,132 @@ export function AdminPanel({
     };
   }, [orders]);
 
+  // Reports Detailed Stats & Trends
+  const reportsStats = useMemo(() => {
+    const today = new Date();
+    const todayStr = today.toDateString();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    let faturamentoDiario = 0;
+    let faturamentoMensal = 0;
+    let faturamentoAnual = 0;
+
+    const dailyMap: { [dateStr: string]: number } = {};
+    const monthlyMap: { [month: number]: number } = {};
+    for (let i = 0; i < 12; i++) {
+      monthlyMap[i] = 0;
+    }
+    const annualMap: { [year: number]: number } = {};
+
+    const productSalesToday: { [prodName: string]: number } = {};
+    const productSales7Days: { [prodName: string]: number } = {};
+    const productSales30Days: { [prodName: string]: number } = {};
+    const productSalesAllTime: { [prodName: string]: number } = {};
+
+    orders.forEach((o) => {
+      if (o.status === 'Cancelado') return;
+
+      const orderDate = o.created_at ? new Date(o.created_at) : new Date();
+      const orderDateStr = orderDate.toDateString();
+      const orderYear = orderDate.getFullYear();
+      const orderMonth = orderDate.getMonth();
+
+      const timeDiff = today.getTime() - orderDate.getTime();
+      const diffDays = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+      // Faturamento totals
+      if (orderDateStr === todayStr) {
+        faturamentoDiario += o.valor_final;
+      }
+      if (orderMonth === currentMonth && orderYear === currentYear) {
+        faturamentoMensal += o.valor_final;
+      }
+      if (orderYear === currentYear) {
+        faturamentoAnual += o.valor_final;
+      }
+
+      // Group for daily chart (last 30 days)
+      if (diffDays <= 30) {
+        const dayFormatted = `${String(orderDate.getDate()).padStart(2, '0')}/${String(orderDate.getMonth() + 1).padStart(2, '0')}`;
+        dailyMap[dayFormatted] = (dailyMap[dayFormatted] || 0) + o.valor_final;
+      }
+
+      // Group for monthly chart (current year)
+      if (orderYear === currentYear) {
+        monthlyMap[orderMonth] = (monthlyMap[orderMonth] || 0) + o.valor_final;
+      }
+
+      // Group for annual chart
+      annualMap[orderYear] = (annualMap[orderYear] || 0) + o.valor_final;
+
+      // Group product sales
+      o.itens.forEach((item) => {
+        const prodName = item.produto_nome;
+        const qty = item.quantidade;
+
+        productSalesAllTime[prodName] = (productSalesAllTime[prodName] || 0) + qty;
+
+        if (orderDateStr === todayStr) {
+          productSalesToday[prodName] = (productSalesToday[prodName] || 0) + qty;
+        }
+        if (diffDays <= 7) {
+          productSales7Days[prodName] = (productSales7Days[prodName] || 0) + qty;
+        }
+        if (diffDays <= 30) {
+          productSales30Days[prodName] = (productSales30Days[prodName] || 0) + qty;
+        }
+      });
+    });
+
+    // Daily trend (last 15 days, including zeros)
+    const dailyTrendData = Array.from({ length: 15 }).map((_, idx) => {
+      const d = new Date();
+      d.setDate(today.getDate() - (14 - idx));
+      const dayFormatted = `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
+      return {
+        name: dayFormatted,
+        Valor: Number((dailyMap[dayFormatted] || 0).toFixed(2))
+      };
+    });
+
+    // Monthly trend (all 12 months)
+    const monthNames = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+    const monthlyTrendData = monthNames.map((name, idx) => ({
+      name,
+      Valor: Number((monthlyMap[idx] || 0).toFixed(2))
+    }));
+
+    // Annual trend (last 5 years)
+    const annualTrendData = Array.from({ length: 5 }).map((_, idx) => {
+      const yr = currentYear - (4 - idx);
+      return {
+        name: String(yr),
+        Valor: Number((annualMap[yr] || 0).toFixed(2))
+      };
+    });
+
+    const getSortedProducts = (map: { [name: string]: number }) => {
+      return Object.entries(map)
+        .map(([name, value]) => ({ name, Quantidade: value }))
+        .sort((a, b) => b.Quantidade - a.Quantidade)
+        .slice(0, 8);
+    };
+
+    return {
+      faturamentoDiario,
+      faturamentoMensal,
+      faturamentoAnual,
+      dailyTrendData,
+      monthlyTrendData,
+      annualTrendData,
+      topProductsToday: getSortedProducts(productSalesToday),
+      topProducts7Days: getSortedProducts(productSales7Days),
+      topProducts30Days: getSortedProducts(productSales30Days),
+      topProductsAllTime: getSortedProducts(productSalesAllTime)
+    };
+  }, [orders]);
+
   // Products CRUD State
   const [editingProduct, setEditingProduct] = useState<Produto | null>(null);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
@@ -106,6 +255,59 @@ export function AdminPanel({
     imagem: '',
     ativo: true
   });
+
+  const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handleFile = (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Por favor, selecione apenas arquivos de imagem.');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      setUploadError('A imagem deve ter no máximo 4MB para garantir o desempenho.');
+      return;
+    }
+
+    setUploadError(null);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (e.target?.result) {
+        setProdForm((prev) => ({ ...prev, imagem: e.target!.result as string }));
+      }
+    };
+    reader.onerror = () => {
+      setUploadError('Erro ao ler o arquivo de imagem.');
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      handleFile(file);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      handleFile(file);
+    }
+  };
 
   // Category CRUD State
   const [isAddingCategory, setIsAddingCategory] = useState(false);
@@ -129,6 +331,8 @@ export function AdminPanel({
       imagem: prod.imagem,
       ativo: prod.ativo
     });
+    setUploadError(null);
+    setImageMode(prod.imagem.startsWith('data:') ? 'upload' : 'url');
     setIsAddingProduct(false);
   };
 
@@ -140,9 +344,11 @@ export function AdminPanel({
       descricao: '',
       preco: '',
       categoria: categorias[0]?.nome || 'Bebidas',
-      imagem: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80',
+      imagem: '',
       ativo: true
     });
+    setUploadError(null);
+    setImageMode('upload');
   };
 
   const handleSaveProduct = (e: React.FormEvent) => {
@@ -155,7 +361,7 @@ export function AdminPanel({
       descricao: prodForm.descricao.trim(),
       preco: priceNum,
       categoria: prodForm.categoria,
-      imagem: prodForm.imagem.trim(),
+      imagem: prodForm.imagem.trim() || 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80',
       ativo: prodForm.ativo
     };
 
@@ -256,6 +462,18 @@ export function AdminPanel({
             >
               <ChevronDown className="h-4 w-4" />
               <span>Categorias</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('reports')}
+              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                activeTab === 'reports'
+                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span>Relatórios e Métricas</span>
             </button>
 
             <button
@@ -570,15 +788,128 @@ export function AdminPanel({
                       </select>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Imagem (Unsplash URL)</label>
-                      <input
-                        type="url"
-                        value={prodForm.imagem}
-                        onChange={(e) => setProdForm({ ...prodForm, imagem: e.target.value })}
-                        placeholder="Ex: https://images.unsplash.com/..."
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
-                      />
+                    <div className="space-y-2 md:col-span-2 border border-[#E3DCD2] p-4 rounded-2xl bg-[#FCFBF9]/50">
+                      <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-2">
+                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase tracking-wider">Imagem do Produto</label>
+                        <div className="flex gap-1.5 bg-[#F4EFE6] p-0.5 rounded-lg border border-[#E3DCD2]">
+                          <button
+                            type="button"
+                            onClick={() => setImageMode('upload')}
+                            className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
+                              imageMode === 'upload'
+                                ? 'bg-[#1E5E3A] text-white shadow-sm'
+                                : 'text-[#706558] hover:text-[#1B3322]'
+                            }`}
+                          >
+                            Upload de Foto
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setImageMode('url')}
+                            className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
+                              imageMode === 'url'
+                                ? 'bg-[#1E5E3A] text-white shadow-sm'
+                                : 'text-[#706558] hover:text-[#1B3322]'
+                            }`}
+                          >
+                            URL da Imagem
+                          </button>
+                        </div>
+                      </div>
+
+                      {imageMode === 'upload' ? (
+                        <div className="space-y-2">
+                          <div
+                            onDragOver={handleDragOver}
+                            onDragLeave={handleDragLeave}
+                            onDrop={handleDrop}
+                            onClick={() => document.getElementById('prod-photo-upload')?.click()}
+                            className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
+                              isDragging
+                                ? 'border-[#1E5E3A] bg-[#1E5E3A]/5'
+                                : 'border-[#E3DCD2] bg-white hover:border-[#1E5E3A]/40'
+                            }`}
+                          >
+                            <input
+                              type="file"
+                              id="prod-photo-upload"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleFileChange}
+                            />
+                            {prodForm.imagem && prodForm.imagem.startsWith('data:') ? (
+                              <div className="relative group w-24 h-24 rounded-lg overflow-hidden border border-[#E3DCD2] shadow-sm">
+                                <img src={prodForm.imagem} alt="Preview" className="w-full h-full object-cover" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                                  <span className="text-[9px] text-white font-bold bg-black/60 px-2 py-1 rounded-md">Trocar</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-10 h-10 rounded-full bg-[#1E5E3A]/10 flex items-center justify-center text-[#1E5E3A]">
+                                <Upload className="h-5 w-5" />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-xs font-bold text-[#1B3322]">
+                                Arraste e solte uma imagem aqui ou clique para selecionar
+                              </p>
+                              <p className="text-[10px] text-[#706558] mt-1">
+                                Aceita PNG, JPG ou GIF de até 4MB
+                              </p>
+                            </div>
+                          </div>
+                          {uploadError && (
+                            <p className="text-xs text-red-600 font-semibold">{uploadError}</p>
+                          )}
+                          {prodForm.imagem && (
+                            <div className="flex items-center gap-2 justify-between bg-white border border-[#E3DCD2] p-2 rounded-xl shadow-sm">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <div className="w-8 h-8 rounded-md overflow-hidden border border-[#E3DCD2] bg-slate-50 flex-shrink-0">
+                                  <img src={prodForm.imagem} alt="Preview" className="w-full h-full object-cover" />
+                                </div>
+                                <span className="text-[10px] text-[#706558] truncate max-w-xs font-semibold font-mono">
+                                  {prodForm.imagem.startsWith('data:') ? 'Imagem carregada com sucesso' : prodForm.imagem}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setProdForm((p) => ({ ...p, imagem: '' }))}
+                                className="text-xs font-bold text-red-600 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg border border-red-200 cursor-pointer transition-all"
+                              >
+                                Remover
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <input
+                            type="url"
+                            value={prodForm.imagem}
+                            onChange={(e) => setProdForm({ ...prodForm, imagem: e.target.value })}
+                            placeholder="Ex: https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600"
+                            className="w-full px-3.5 py-2.5 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                          />
+                          {prodForm.imagem && (
+                            <div className="flex items-center gap-2 bg-white border border-[#E3DCD2] p-2 rounded-xl shadow-sm">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E3DCD2] bg-slate-50 flex-shrink-0">
+                                <img
+                                  src={prodForm.imagem}
+                                  alt="Preview externa"
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80';
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <p className="text-[10px] font-bold text-[#1B3322]">Visualização da Imagem Externa</p>
+                                <p className="text-[9px] text-[#706558] truncate max-w-xs">{prodForm.imagem}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-1.5 md:col-span-2">
@@ -762,6 +1093,337 @@ export function AdminPanel({
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'reports' && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="border-b border-[#E3DCD2] pb-3">
+                <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Relatórios & Estatísticas</h2>
+                <p className="text-xs text-[#706558]">Acompanhe o desempenho de vendas, faturamento e produtos mais populares</p>
+              </div>
+
+              {/* KPI Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1E5E3A]" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-[#9C8E7B] tracking-wider">Faturamento Hoje</span>
+                    <span className="p-1.5 bg-[#1E5E3A]/10 text-[#1E5E3A] rounded-lg">
+                      <TrendingUp className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-serif font-bold text-[#1B3322]">
+                      R$ {reportsStats.faturamentoDiario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </h3>
+                    <p className="text-[10px] text-[#706558] mt-1">Apenas pedidos concluídos/ativos de hoje</p>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-[#9C8E7B] tracking-wider">Faturamento Mensal</span>
+                    <span className="p-1.5 bg-amber-50 rounded-lg text-amber-600">
+                      <BarChart3 className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-serif font-bold text-[#1B3322]">
+                      R$ {reportsStats.faturamentoMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </h3>
+                    <p className="text-[10px] text-[#706558] mt-1">Mês corrente ({new Date().toLocaleString('pt-BR', { month: 'long' })})</p>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600" />
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-[#9C8E7B] tracking-wider">Faturamento Anual</span>
+                    <span className="p-1.5 bg-emerald-50 rounded-lg text-emerald-600">
+                      <PieIcon className="h-4 w-4" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-serif font-bold text-[#1B3322]">
+                      R$ {reportsStats.faturamentoAnual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </h3>
+                    <p className="text-[10px] text-[#706558] mt-1">Ano corrente ({new Date().getFullYear()})</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Charts Section */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* 1. Revenue Over Time Chart */}
+                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E3DCD2] pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#1B3322] font-serif">Fluxo de Faturamento</h3>
+                      <p className="text-[10px] text-[#706558]">Visualização do faturamento total por período</p>
+                    </div>
+                    <div className="flex bg-[#F4EFE6] p-0.5 rounded-lg border border-[#E3DCD2] text-[10px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setRevenuePeriod('daily')}
+                        className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                          revenuePeriod === 'daily'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        Diário
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRevenuePeriod('monthly')}
+                        className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                          revenuePeriod === 'monthly'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        Mensal
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setRevenuePeriod('annual')}
+                        className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
+                          revenuePeriod === 'annual'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        Anual
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      {revenuePeriod === 'daily' ? (
+                        <AreaChart
+                          data={reportsStats.dailyTrendData}
+                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <defs>
+                            <linearGradient id="colorDaily" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#1E5E3A" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" vertical={false} />
+                          <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                          <YAxis tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
+                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#1B3322' }}
+                            itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                            formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
+                          />
+                          <Area type="monotone" dataKey="Valor" stroke="#1E5E3A" strokeWidth={2} fillOpacity={1} fill="url(#colorDaily)" />
+                        </AreaChart>
+                      ) : revenuePeriod === 'monthly' ? (
+                        <BarChart
+                          data={reportsStats.monthlyTrendData}
+                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" vertical={false} />
+                          <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                          <YAxis tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
+                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#1B3322' }}
+                            itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                            formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
+                          />
+                          <Bar dataKey="Valor" fill="#1E5E3A" radius={[4, 4, 0, 0]} maxBarSize={35} />
+                        </BarChart>
+                      ) : (
+                        <BarChart
+                          data={reportsStats.annualTrendData}
+                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" vertical={false} />
+                          <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                          <YAxis tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                          <Tooltip
+                            contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
+                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#1B3322' }}
+                            itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                            formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
+                          />
+                          <Bar dataKey="Valor" fill="#1E5E3A" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                        </BarChart>
+                      )}
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+
+                {/* 2. Most Sold Products Chart */}
+                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E3DCD2] pb-3">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#1B3322] font-serif">Produtos Mais Vendidos</h3>
+                      <p className="text-[10px] text-[#706558]">Produtos com maior volume de saídas por período</p>
+                    </div>
+                    <div className="flex bg-[#F4EFE6] p-0.5 rounded-lg border border-[#E3DCD2] text-[9px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setProdPeriod('today')}
+                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                          prodPeriod === 'today'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        Hoje
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProdPeriod('7days')}
+                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                          prodPeriod === '7days'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        7 Dias
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProdPeriod('30days')}
+                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                          prodPeriod === '30days'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        30 Dias
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setProdPeriod('all')}
+                        className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
+                          prodPeriod === 'all'
+                            ? 'bg-[#1E5E3A] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#1B3322]'
+                        }`}
+                      >
+                        Tudo
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="h-72 w-full flex items-center justify-center">
+                    {(() => {
+                      const currentTopProducts = 
+                        prodPeriod === 'today' ? reportsStats.topProductsToday :
+                        prodPeriod === '7days' ? reportsStats.topProducts7Days :
+                        prodPeriod === '30days' ? reportsStats.topProducts30Days :
+                        reportsStats.topProductsAllTime;
+
+                      if (currentTopProducts.length === 0) {
+                        return (
+                          <div className="text-center py-12 space-y-2">
+                            <span className="text-3xl">🥥</span>
+                            <p className="text-xs font-bold text-[#9C8E7B]">Sem vendas registradas neste período</p>
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart
+                            layout="vertical"
+                            data={currentTopProducts}
+                            margin={{ top: 10, right: 10, left: 30, bottom: 5 }}
+                          >
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" horizontal={false} />
+                            <XAxis type="number" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#1B3322', fontWeight: 'semibold' }} tickLine={false} axisLine={false} width={80} />
+                            <Tooltip
+                              contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
+                              itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                              formatter={(value: any) => [`${value} unidades`, 'Vendido']}
+                            />
+                            <Bar dataKey="Quantidade" fill="#D97706" radius={[0, 4, 4, 0]} maxBarSize={18}>
+                              {currentTopProducts.map((entry, index) => {
+                                const colors = ['#1E5E3A', '#2D7F50', '#41A36B', '#D97706', '#E28C28', '#EAA24C', '#84735E', '#9C8E7B'];
+                                return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
+                              })}
+                            </Bar>
+                          </BarChart>
+                        </ResponsiveContainer>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Products Table/List for quick scanning */}
+              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+                <div>
+                  <h3 className="text-sm font-bold text-[#1B3322] font-serif">Ranking de Popularidade do Menu</h3>
+                  <p className="text-[10px] text-[#706558]">Detalhamento de quantidades vendidas acumuladas</p>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-[#E3DCD2]">
+                        <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Produto</th>
+                        <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Hoje</th>
+                        <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Últimos 7 dias</th>
+                        <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Últimos 30 dias</th>
+                        <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Total Histórico</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {products.map((prod) => {
+                        const getQty = (arr: { name: string, Quantidade: number }[]) => 
+                          arr.find(item => item.name === prod.nome)?.Quantidade || 0;
+
+                        const todayQty = getQty(reportsStats.topProductsToday);
+                        const sevenQty = getQty(reportsStats.topProducts7Days);
+                        const thirtyQty = getQty(reportsStats.topProducts30Days);
+                        const allQty = getQty(reportsStats.topProductsAllTime);
+
+                        return (
+                          <tr key={prod.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
+                            <td className="py-3 text-xs font-bold text-[#1B3322] flex items-center gap-2">
+                              {prod.imagem ? (
+                                <img src={prod.imagem} alt={prod.nome} className="w-6 h-6 rounded-md object-cover border border-[#E3DCD2]" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-md bg-[#1E5E3A]/10 flex items-center justify-center text-[10px]">🥥</div>
+                              )}
+                              <span>{prod.nome}</span>
+                            </td>
+                            <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
+                              {todayQty > 0 ? (
+                                <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-bold">{todayQty}</span>
+                              ) : '-'}
+                            </td>
+                            <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
+                              {sevenQty > 0 ? (
+                                <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold">{sevenQty}</span>
+                              ) : '-'}
+                            </td>
+                            <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
+                              {thirtyQty > 0 ? (
+                                <span className="bg-slate-50 text-slate-700 px-2 py-0.5 rounded-full font-bold">{thirtyQty}</span>
+                              ) : '-'}
+                            </td>
+                            <td className="py-3 text-xs font-black text-[#1E5E3A] text-center font-mono">
+                              {allQty > 0 ? allQty : '-'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
