@@ -64,6 +64,7 @@ interface AdminPanelProps {
   onUpdateCategory: (id: string, nome: string) => void;
   onDeleteCategory: (id: string) => void;
   onUpdateConfig: (conf: ConfigEstabelecimento) => void;
+  onSyncLocalToSupabase?: () => Promise<void>;
   onClose: () => void;
   supabaseStatus: 'connected' | 'disconnected' | 'unconfigured';
 }
@@ -81,12 +82,14 @@ export function AdminPanel({
   onUpdateCategory,
   onDeleteCategory,
   onUpdateConfig,
+  onSyncLocalToSupabase,
   onClose,
   supabaseStatus
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports'>('orders');
   const [prodPeriod, setProdPeriod] = useState<'today' | '7days' | '30days' | 'all'>('all');
   const [revenuePeriod, setRevenuePeriod] = useState<'daily' | 'monthly' | 'annual'>('daily');
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // Dashboard Stats
   const stats = useMemo(() => {
@@ -1591,6 +1594,50 @@ export function AdminPanel({
                   </p>
                 </div>
               </div>
+
+              {/* Sincronização direta de dados locais */}
+              {supabaseStatus === 'connected' && (
+                <div className="p-5 bg-[#FCFBF9] border border-emerald-200 rounded-2xl space-y-4 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-2 h-full bg-emerald-600" />
+                  <div className="pl-2 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Database className="h-5 w-5 text-emerald-600 animate-pulse" />
+                      <h3 className="text-sm font-black text-[#1B3322] uppercase tracking-wider font-serif italic">Sincronização Ativa</h3>
+                    </div>
+                    <p className="text-[11px] text-[#706558] leading-normal">
+                      Sua conta Supabase está ativa e conectada! Clique no botão abaixo para copiar e sincronizar todas as categorias locais (<strong>{categorias.length} categorias</strong>) e produtos (<strong>{products.length} itens</strong>) diretamente com o seu banco de dados na nuvem.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!onSyncLocalToSupabase) return;
+                        setIsSyncing(true);
+                        try {
+                          await onSyncLocalToSupabase();
+                        } catch (err) {
+                          console.error(err);
+                        } finally {
+                          setIsSyncing(false);
+                        }
+                      }}
+                      disabled={isSyncing}
+                      className="px-5 py-3 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 disabled:bg-[#1E5E3A]/50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
+                    >
+                      {isSyncing ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white border-t-transparent" />
+                          <span>Sincronizando Banco...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Database className="h-4 w-4" />
+                          <span>Enviar Menu Local para o Supabase</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* SQL Migration Script Copy Box */}
               <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 space-y-4 shadow-sm">

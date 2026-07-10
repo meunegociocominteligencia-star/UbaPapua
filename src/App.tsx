@@ -530,18 +530,30 @@ export default function App() {
   const handleUpdateOrderStatus = async (id: string, status: OrderStatus) => {
     try {
       const realSupabase = getSupabase();
-      if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('pedidos').update({ status }).eq('id', id);
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        const { error } = await realSupabase.from('pedidos').update({ status }).eq('id', id);
+        if (error) throw error;
+        
+        // Update local React state immediately
+        setOrders((prev) =>
+          prev.map((o) => (o.id === id ? { ...o, status } : o))
+        );
       } else {
-        await fetch(`/api/orders/${id}/status`, {
+        const res = await fetch(`/api/orders/${id}/status`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status })
         });
+        if (!res.ok) throw new Error('Falha ao atualizar no servidor');
+        
+        setOrders((prev) =>
+          prev.map((o) => (o.id === id ? { ...o, status } : o))
+        );
       }
       showToast(`Pedido status atualizado para ${status}.`, 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update status:', err);
+      showToast(`Erro ao atualizar status: ${err.message || err}`, 'error');
     }
   };
 
@@ -549,49 +561,123 @@ export default function App() {
     try {
       const realSupabase = getSupabase();
       if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('produtos').insert(prod);
+        const { data, error } = await realSupabase.from('produtos').insert(prod).select();
+        if (error) throw error;
+        
+        if (data && data[0]) {
+          const newProd: Produto = {
+            id: data[0].id,
+            nome: data[0].nome,
+            descricao: data[0].descricao,
+            categoria: data[0].categoria,
+            preco: parseFloat(data[0].preco),
+            imagem: data[0].imagem,
+            ativo: data[0].ativo,
+            ordem: data[0].ordem
+          };
+          setProdutos((prev) => [...prev, newProd]);
+          await offlineDB.saveProdutos([...produtos, newProd]);
+        } else {
+          // Fallback if select doesn't return data (due to some RLS/triggers)
+          const { data: allProds } = await realSupabase.from('produtos').select('*').order('ordem');
+          if (allProds) {
+            const mapped = allProds.map((p: any) => ({
+              id: p.id,
+              nome: p.nome,
+              descricao: p.descricao,
+              categoria: p.categoria,
+              preco: parseFloat(p.preco),
+              imagem: p.imagem,
+              ativo: p.ativo,
+              ordem: p.ordem
+            }));
+            setProdutos(mapped);
+            await offlineDB.saveProdutos(mapped);
+          }
+        }
       } else {
-        await fetch('/api/products', {
+        const res = await fetch('/api/products', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(prod)
         });
+        if (!res.ok) throw new Error('Falha ao criar produto no servidor');
+        const newProd = await res.json();
+        
+        setProdutos((prev) => {
+          if (prev.some((p) => p.id === newProd.id)) return prev;
+          const updated = [...prev, newProd];
+          offlineDB.saveProdutos(updated);
+          return updated;
+        });
       }
       showToast(`Produto "${prod.nome}" adicionado com sucesso.`, 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add product:', err);
+      showToast(`Erro ao adicionar produto: ${err.message || err}`, 'error');
     }
   };
 
   const handleUpdateProduct = async (id: string, prod: Partial<Produto>) => {
     try {
       const realSupabase = getSupabase();
-      if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('produtos').update(prod).eq('id', id);
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        const { error } = await realSupabase.from('produtos').update(prod).eq('id', id);
+        if (error) throw error;
+        
+        setProdutos((prev) => {
+          const updated = prev.map((p) => (p.id === id ? { ...p, ...prod } : p));
+          offlineDB.saveProdutos(updated);
+          return updated;
+        });
       } else {
-        await fetch(`/api/products/${id}`, {
+        const res = await fetch(`/api/products/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(prod)
         });
+        if (!res.ok) throw new Error('Falha ao atualizar produto no servidor');
+        const updatedProd = await res.json();
+        
+        setProdutos((prev) => {
+          const updated = prev.map((p) => (p.id === id ? { ...p, ...updatedProd } : p));
+          offlineDB.saveProdutos(updated);
+          return updated;
+        });
       }
       showToast('Produto atualizado com sucesso.', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update product:', err);
+      showToast(`Erro ao atualizar produto: ${err.message || err}`, 'error');
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
     try {
       const realSupabase = getSupabase();
-      if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('produtos').delete().eq('id', id);
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        const { error } = await realSupabase.from('produtos').delete().eq('id', id);
+        if (error) throw error;
+        
+        setProdutos((prev) => {
+          const updated = prev.filter((p) => p.id !== id);
+          offlineDB.saveProdutos(updated);
+          return updated;
+        });
       } else {
-        await fetch(`/api/products/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Falha ao remover produto no servidor');
+        
+        setProdutos((prev) => {
+          const updated = prev.filter((p) => p.id !== id);
+          offlineDB.saveProdutos(updated);
+          return updated;
+        });
       }
       showToast('Produto removido com sucesso.', 'info');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete product:', err);
+      showToast(`Erro ao remover produto: ${err.message || err}`, 'error');
     }
   };
 
@@ -599,49 +685,148 @@ export default function App() {
     try {
       const realSupabase = getSupabase();
       if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('categorias').insert({ nome });
+        const { data, error } = await realSupabase.from('categorias').insert({ nome }).select();
+        if (error) throw error;
+        
+        if (data && data[0]) {
+          const newCat: Categoria = {
+            id: data[0].id,
+            nome: data[0].nome
+          };
+          setCategorias((prev) => [...prev, newCat]);
+          await offlineDB.saveCategorias([...categorias, newCat]);
+        } else {
+          const { data: allCats } = await realSupabase.from('categorias').select('*');
+          if (allCats) {
+            setCategorias(allCats);
+            await offlineDB.saveCategorias(allCats);
+          }
+        }
       } else {
-        await fetch('/api/categories', {
+        const res = await fetch('/api/categories', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome })
         });
+        if (!res.ok) throw new Error('Falha ao criar categoria no servidor');
+        const newCat = await res.json();
+        
+        setCategorias((prev) => {
+          if (prev.some((c) => c.id === newCat.id)) return prev;
+          const updated = [...prev, newCat];
+          offlineDB.saveCategorias(updated);
+          return updated;
+        });
       }
       showToast(`Categoria "${nome}" criada com sucesso.`, 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to add category:', err);
+      showToast(`Erro ao adicionar categoria: ${err.message || err}`, 'error');
     }
   };
 
   const handleUpdateCategory = async (id: string, nome: string) => {
     try {
       const realSupabase = getSupabase();
-      if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('categorias').update({ nome }).eq('id', id);
+      const oldCat = categorias.find((c) => c.id === id);
+      
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        const { error } = await realSupabase.from('categorias').update({ nome }).eq('id', id);
+        if (error) throw error;
+        
+        setCategorias((prev) => {
+          const updated = prev.map((c) => (c.id === id ? { ...c, nome } : c));
+          offlineDB.saveCategorias(updated);
+          return updated;
+        });
+
+        if (oldCat) {
+          // Cascade category update to products table in Supabase
+          await realSupabase.from('produtos').update({ categoria: nome }).eq('categoria', oldCat.nome);
+          setProdutos((prev) => {
+            const updated = prev.map((p) => p.categoria === oldCat.nome ? { ...p, categoria: nome } : p);
+            offlineDB.saveProdutos(updated);
+            return updated;
+          });
+        }
       } else {
-        await fetch(`/api/categories/${id}`, {
+        const res = await fetch(`/api/categories/${id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome })
         });
+        if (!res.ok) throw new Error('Falha ao atualizar categoria no servidor');
+        const updatedCat = await res.json();
+        
+        setCategorias((prev) => {
+          const updated = prev.map((c) => (c.id === id ? updatedCat : c));
+          offlineDB.saveCategorias(updated);
+          return updated;
+        });
+
+        if (oldCat) {
+          setProdutos((prev) => {
+            const updated = prev.map((p) => p.categoria === oldCat.nome ? { ...p, categoria: nome } : p);
+            offlineDB.saveProdutos(updated);
+            return updated;
+          });
+        }
       }
       showToast('Categoria atualizada com sucesso.', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update category:', err);
+      showToast(`Erro ao atualizar categoria: ${err.message || err}`, 'error');
     }
   };
 
   const handleDeleteCategory = async (id: string) => {
     try {
       const realSupabase = getSupabase();
-      if (realSupabase && hasSupabaseConfig) {
-        await realSupabase.from('categorias').delete().eq('id', id);
+      const oldCat = categorias.find((c) => c.id === id);
+      
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        if (oldCat) {
+          // Cascade delete products in this category in Supabase FIRST to avoid FK constraint violation
+          const { error: prodErr } = await realSupabase.from('produtos').delete().eq('categoria', oldCat.nome);
+          if (prodErr) throw prodErr;
+          
+          setProdutos((prev) => {
+            const updated = prev.filter((p) => p.categoria !== oldCat.nome);
+            offlineDB.saveProdutos(updated);
+            return updated;
+          });
+        }
+
+        const { error } = await realSupabase.from('categorias').delete().eq('id', id);
+        if (error) throw error;
+        
+        setCategorias((prev) => {
+          const updated = prev.filter((c) => c.id !== id);
+          offlineDB.saveCategorias(updated);
+          return updated;
+        });
       } else {
-        await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+        const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Falha ao remover categoria do servidor');
+        
+        setCategorias((prev) => {
+          const updated = prev.filter((c) => c.id !== id);
+          offlineDB.saveCategorias(updated);
+          return updated;
+        });
+
+        if (oldCat) {
+          setProdutos((prev) => {
+            const updated = prev.filter((p) => p.categoria !== oldCat.nome);
+            offlineDB.saveProdutos(updated);
+            return updated;
+          });
+        }
       }
       showToast('Categoria removida do cardápio.', 'info');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to delete category:', err);
+      showToast(`Erro ao remover categoria: ${err.message || err}`, 'error');
     }
   };
 
@@ -662,6 +847,104 @@ export default function App() {
       showToast('Configurações salvas com sucesso.', 'success');
     } catch (err) {
       console.error('Failed to update config:', err);
+    }
+  };
+
+  const handleSyncLocalToSupabase = async () => {
+    try {
+      const realSupabase = getSupabase();
+      if (!realSupabase || !hasSupabaseConfig) {
+        showToast('Supabase não configurado ou desconectado. Verifique as credenciais.', 'warning');
+        return;
+      }
+
+      showToast('Iniciando sincronização dos dados locais com o Supabase...', 'info');
+
+      // 1. Sincronizar Categorias
+      for (const cat of categorias) {
+        const { error: catErr } = await realSupabase
+          .from('categorias')
+          .upsert({ nome: cat.nome }, { onConflict: 'nome' });
+        if (catErr) {
+          console.error('Erro ao sincronizar categoria:', cat.nome, catErr);
+          throw catErr;
+        }
+      }
+
+      // 2. Buscar produtos já existentes no Supabase para evitar duplicidade
+      const { data: existingProds, error: fetchErr } = await realSupabase
+        .from('produtos')
+        .select('*');
+      
+      if (fetchErr) throw fetchErr;
+
+      // 3. Sincronizar Produtos
+      for (const prod of produtos) {
+        const matched = existingProds?.find((p: any) => p.nome === prod.nome);
+        if (matched) {
+          // Atualizar produto existente
+          const { error: updateErr } = await realSupabase
+            .from('produtos')
+            .update({
+              descricao: prod.descricao,
+              categoria: prod.categoria,
+              preco: prod.preco,
+              imagem: prod.imagem,
+              ativo: prod.ativo,
+              ordem: prod.ordem
+            })
+            .eq('id', matched.id);
+          if (updateErr) {
+            console.error('Erro ao atualizar produto:', prod.nome, updateErr);
+            throw updateErr;
+          }
+        } else {
+          // Inserir novo produto
+          const { error: insertErr } = await realSupabase
+            .from('produtos')
+            .insert({
+              nome: prod.nome,
+              descricao: prod.descricao,
+              categoria: prod.categoria,
+              preco: prod.preco,
+              imagem: prod.imagem,
+              ativo: prod.ativo,
+              ordem: prod.ordem
+            });
+          if (insertErr) {
+            console.error('Erro ao inserir produto:', prod.nome, insertErr);
+            throw insertErr;
+          }
+        }
+      }
+
+      // 4. Recarregar dados do Supabase para atualizar o estado local
+      const { data: updatedCats } = await realSupabase.from('categorias').select('*');
+      if (updatedCats) {
+        setCategorias(updatedCats);
+        await offlineDB.saveCategorias(updatedCats);
+      }
+
+      const { data: updatedProds } = await realSupabase.from('produtos').select('*').order('ordem');
+      if (updatedProds) {
+        const mappedProds = updatedProds.map((p: any) => ({
+          id: p.id,
+          nome: p.nome,
+          descricao: p.descricao,
+          categoria: p.categoria,
+          preco: parseFloat(p.preco),
+          imagem: p.imagem,
+          ativo: p.ativo,
+          ordem: p.ordem
+        }));
+        setProdutos(mappedProds);
+        await offlineDB.saveProdutos(mappedProds);
+      }
+
+      showToast('Banco de dados local sincronizado com sucesso com o Supabase!', 'success');
+    } catch (err: any) {
+      console.error('Falha na sincronização completa:', err);
+      showToast(`Erro na sincronização: ${err.message || 'Verifique se as tabelas foram criadas no SQL Editor.'}`, 'error');
     }
   };
 
@@ -837,6 +1120,7 @@ export default function App() {
               onUpdateCategory={handleUpdateCategory}
               onDeleteCategory={handleDeleteCategory}
               onUpdateConfig={handleUpdateConfig}
+              onSyncLocalToSupabase={handleSyncLocalToSupabase}
               supabaseStatus={supabaseStatus}
               onClose={() => {
                 if (clienteNome) {
