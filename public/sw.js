@@ -14,7 +14,14 @@ const ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS);
+      // Add assets individually to prevent a single failure from blocking the installation
+      return Promise.allSettled(
+        ASSETS.map((asset) => {
+          return cache.add(asset).catch((err) => {
+            console.warn(`Failed to cache asset: ${asset}`, err);
+          });
+        })
+      );
     })
   );
   self.skipWaiting();
@@ -36,8 +43,22 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Ignore SSE streams and backend API routes from cache
-  if (event.request.url.includes('/api/')) {
+  // Only handle GET requests
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const url = new URL(event.request.url);
+  const isSameOrigin = url.origin === self.location.origin;
+  const isUnsplash = url.hostname.includes('images.unsplash.com');
+
+  // Skip intercepting for API routes, SSE stream, or unconfigured backend requests
+  if (url.pathname.includes('/api/') || url.pathname.includes('/stream')) {
+    return;
+  }
+
+  // Skip intercepting for third-party requests (like Supabase, auth, external metrics) except Unsplash images
+  if (!isSameOrigin && !isUnsplash) {
     return;
   }
 
@@ -48,16 +69,14 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(event.request).then((response) => {
         // Cache external image URLs from Unsplash for seamless offline displays
-        if (event.request.url.includes('images.unsplash.com')) {
+        if (isUnsplash && response.status === 200) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
             cache.put(event.request, responseClone);
           });
         }
         return response;
-      }).catch(() => {
-        // Fallback or handle offline
-      });
+      }); // No catch-all returning undefined, let network errors propagate naturally so the browser knows we are offline
     })
   );
 });

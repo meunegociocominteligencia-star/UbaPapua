@@ -399,9 +399,29 @@ export function AdminPanel({
   };
 
   const copySqlSetup = () => {
-    navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
-    setSqlCopied(true);
-    setTimeout(() => setSqlCopied(false), 3000);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(SUPABASE_SQL_SETUP);
+        setSqlCopied(true);
+        setTimeout(() => setSqlCopied(false), 3000);
+      } else {
+        // Fallback for older browsers or restricted iframe environments
+        const textArea = document.createElement('textarea');
+        textArea.value = SUPABASE_SQL_SETUP;
+        textArea.style.position = 'fixed'; // Avoid scrolling to bottom
+        textArea.style.opacity = '0';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setSqlCopied(true);
+        setTimeout(() => setSqlCopied(false), 3000);
+      }
+    } catch (err) {
+      console.error('Failed to copy text: ', err);
+      alert('Não foi possível copiar automaticamente. Selecione e copie o código manualmente.');
+    }
   };
 
   return (
