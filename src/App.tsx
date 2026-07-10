@@ -40,16 +40,47 @@ function isValidUUID(str: string): boolean {
   return regex.test(str);
 }
 
+const safeStorage = {
+  getItem: (key: string): string | null => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return window.localStorage.getItem(key);
+      }
+    } catch (e) {
+      console.warn('localStorage is disabled or blocked in this browser context:', e);
+    }
+    return null;
+  },
+  setItem: (key: string, value: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.setItem(key, value);
+      }
+    } catch (e) {
+      console.warn('localStorage is disabled or blocked in this browser context:', e);
+    }
+  },
+  removeItem: (key: string): void => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem(key);
+      }
+    } catch (e) {
+      console.warn('localStorage is disabled or blocked in this browser context:', e);
+    }
+  }
+};
+
 export default function App() {
   // Session / Router state
   const [clienteNome, setClienteNome] = useState<string | null>(
-    localStorage.getItem('cliente_nome')
+    safeStorage.getItem('cliente_nome')
   );
   const [clienteQuiosque, setClienteQuiosque] = useState<string | null>(
-    localStorage.getItem('cliente_quiosque')
+    safeStorage.getItem('cliente_quiosque')
   );
   const [activeView, setActiveView] = useState<'identification' | 'cardapio' | 'orders_status' | 'admin'>(
-    localStorage.getItem('cliente_nome') ? 'cardapio' : 'identification'
+    safeStorage.getItem('cliente_nome') ? 'cardapio' : 'identification'
   );
 
   // Core content states
@@ -62,7 +93,7 @@ export default function App() {
   // Interactive controls
   const [cart, setCart] = useState<{ [id: string]: number }>(() => {
     try {
-      const saved = localStorage.getItem('cart');
+      const saved = safeStorage.getItem('cart');
       return saved ? JSON.parse(saved) : {};
     } catch {
       return {};
@@ -86,7 +117,7 @@ export default function App() {
 
   // Persist cart
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
+    safeStorage.setItem('cart', JSON.stringify(cart));
   }, [cart]);
 
   // Synchronize local states with online/offline triggers
@@ -378,8 +409,8 @@ export default function App() {
   const handleIdentify = (nome: string, quiosque: string) => {
     setClienteNome(nome);
     setClienteQuiosque(quiosque);
-    localStorage.setItem('cliente_nome', nome);
-    localStorage.setItem('cliente_quiosque', quiosque);
+    safeStorage.setItem('cliente_nome', nome);
+    safeStorage.setItem('cliente_quiosque', quiosque);
     setActiveView('cardapio');
     showToast(`Bem-vindo, ${nome}! Boas compras.`, 'success');
   };
@@ -388,8 +419,8 @@ export default function App() {
   const handleLogout = () => {
     setClienteNome(null);
     setClienteQuiosque(null);
-    localStorage.removeItem('cliente_nome');
-    localStorage.removeItem('cliente_quiosque');
+    safeStorage.removeItem('cliente_nome');
+    safeStorage.removeItem('cliente_quiosque');
     setCart({});
     setActiveView('identification');
   };
