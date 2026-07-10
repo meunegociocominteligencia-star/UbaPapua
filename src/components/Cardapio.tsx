@@ -52,34 +52,34 @@ export function Cardapio({
   }, [produtos, selectedCategory, searchQuery]);
 
   return (
-    <div id="client-menu-container" className="min-h-screen bg-[#FDFBF7] pb-32 text-[#1A2E35]">
+    <div id="client-menu-container" className="min-h-screen bg-[#FCFBF9] pb-32 text-[#1B3322]">
       {/* Top Welcome Header Bar */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E8E2D9] px-4 py-3.5 shadow-sm">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E3DCD2] px-4 py-3.5 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-[#F5F2ED] border border-[#E8E2D9] flex items-center justify-center text-xl shadow-sm">
-              {config.logo || '🌊'}
+            <div className="w-10 h-10 rounded-xl bg-[#F4EFE6] border border-[#E3DCD2] flex items-center justify-center text-xl shadow-sm">
+              {config.logo || '🥥'}
             </div>
             <div className="flex flex-col">
-              <span className="text-[9px] uppercase tracking-widest text-[#A89F91] font-black leading-none">Quiosque</span>
-              <span className="text-xl font-serif italic text-[#0077BE] leading-tight font-bold">{config.nome}</span>
+              <span className="text-[9px] uppercase tracking-widest text-[#9C8E7B] font-black leading-none">Quiosque</span>
+              <span className="text-xl font-serif italic text-[#1E5E3A] leading-tight font-bold">{config.nome}</span>
             </div>
-            <div className="h-6 w-[1px] bg-[#E8E2D9] mx-1 hidden sm:block"></div>
+            <div className="h-6 w-[1px] bg-[#E3DCD2] mx-1 hidden sm:block"></div>
             <div className="flex flex-col hidden sm:flex">
-              <span className="text-[9px] uppercase tracking-widest text-[#A89F91] font-black leading-none">Mesa / Local</span>
-              <span className="text-sm font-bold text-[#1A2E35] mt-0.5">{clienteQuiosque}</span>
+              <span className="text-[9px] uppercase tracking-widest text-[#9C8E7B] font-black leading-none">Mesa / Local</span>
+              <span className="text-sm font-bold text-[#1B3322] mt-0.5">{clienteQuiosque}</span>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="flex flex-col items-end sm:hidden">
-              <span className="text-[9px] uppercase tracking-widest text-[#A89F91] font-black leading-none">Local</span>
-              <span className="text-xs font-bold text-[#1A2E35]">{clienteQuiosque}</span>
+              <span className="text-[9px] uppercase tracking-widest text-[#9C8E7B] font-black leading-none">Local</span>
+              <span className="text-xs font-bold text-[#1B3322]">{clienteQuiosque}</span>
             </div>
             <button
               id="change-identification-button"
               onClick={onLogout}
-              className="text-xs font-bold text-[#5C6B73] hover:text-[#0077BE] transition-colors px-3 py-1.5 rounded-xl hover:bg-[#F5F2ED] border border-transparent hover:border-[#E8E2D9]"
+              className="text-xs font-bold text-[#706558] hover:text-[#1E5E3A] transition-colors px-3 py-1.5 rounded-xl hover:bg-[#F4EFE6] border border-transparent hover:border-[#E3DCD2]"
             >
               Alterar
             </button>
@@ -90,22 +90,22 @@ export function Cardapio({
       {/* Main Container */}
       <main className="max-w-4xl mx-auto px-4 mt-6 space-y-6">
         {/* Banner Card */}
-        <div className="relative rounded-[32px] overflow-hidden bg-[#F5F2ED] border border-[#E8E2D9] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+        <div className="relative rounded-[32px] overflow-hidden bg-[#F4EFE6] border border-[#E3DCD2] p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
           <div className="space-y-2 text-center md:text-left">
-            <span className="px-3 py-1 bg-[#0077BE]/10 text-[#0077BE] text-xs font-bold rounded-full border border-[#0077BE]/20 uppercase tracking-widest">
+            <span className="px-3 py-1 bg-[#1E5E3A]/10 text-[#1E5E3A] text-xs font-bold rounded-full border border-[#1E5E3A]/20 uppercase tracking-widest">
               Quiosque & Bar de Praia
             </span>
-            <h1 className="text-2xl md:text-3xl font-serif italic text-[#1A2E35] mt-2">
+            <h1 className="text-2xl md:text-3xl font-serif italic text-[#1B3322] mt-2 font-bold">
               Seu pedido à beira-mar
             </h1>
-            <p className="text-sm text-[#5C6B73] max-w-md leading-relaxed">
+            <p className="text-sm text-[#706558] max-w-md leading-relaxed">
               Peça porções quentes, cervejas estupidamente geladas e drinks autorais sem sair da sua cadeira.
             </p>
           </div>
           <div className="relative w-28 h-28 flex-shrink-0">
             {/* Visual illustrative beach representation */}
-            <div className="absolute inset-0 bg-gradient-to-tr from-[#0077BE] to-[#F27D26] rounded-full blur-xl opacity-20 animate-pulse" />
-            <div className="w-full h-full bg-white border border-[#E8E2D9] rounded-full flex items-center justify-center text-5xl shadow-sm">
+            <div className="absolute inset-0 bg-gradient-to-tr from-[#1E5E3A] to-[#7F5539] rounded-full blur-xl opacity-20 animate-pulse" />
+            <div className="w-full h-full bg-white border border-[#E3DCD2] rounded-full flex items-center justify-center text-5xl shadow-sm">
               🍹
             </div>
           </div>
@@ -113,8 +113,8 @@ export function Cardapio({
 
         {/* Quick Search */}
         <div className="relative">
-          <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-[#A89F91] pointer-events-none">
-            <Search className="h-5 w-5 text-[#0077BE]" />
+          <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-[#9C8E7B] pointer-events-none">
+            <Search className="h-5 w-5 text-[#1E5E3A]" />
           </span>
           <input
             id="product-search-input"
@@ -122,13 +122,13 @@ export function Cardapio({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Pesquisar água de coco, batata frita, caipirinha..."
-            className="w-full pl-12 pr-4 py-3.5 bg-white border border-[#E8E2D9] rounded-full text-[#1A2E35] placeholder-[#A89F91] focus:outline-none focus:border-[#0077BE] focus:ring-1 focus:ring-[#0077BE] transition-all font-medium shadow-sm"
+            className="w-full pl-12 pr-4 py-3.5 bg-white border border-[#E3DCD2] rounded-full text-[#1B3322] placeholder-[#9C8E7B] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] transition-all font-medium shadow-sm"
           />
         </div>
 
         {/* Categories Horizontal Carousel */}
         <div className="space-y-2">
-          <h3 className="text-xs font-bold text-[#A89F91] uppercase tracking-[0.15em] pl-1">
+          <h3 className="text-xs font-bold text-[#9C8E7B] uppercase tracking-[0.15em] pl-1">
             Categorias do Cardápio
           </h3>
           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-none snap-x -mx-4 px-4">
@@ -136,8 +136,8 @@ export function Cardapio({
               onClick={() => setSelectedCategory('Todos')}
               className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer snap-start ${
                 selectedCategory === 'Todos'
-                  ? 'bg-[#0077BE] text-white shadow-lg shadow-blue-100'
-                  : 'bg-transparent border border-[#E8E2D9] hover:bg-white text-[#5C6B73] hover:text-[#1A2E35]'
+                  ? 'bg-[#1E5E3A] text-white shadow-lg shadow-green-100'
+                  : 'bg-transparent border border-[#E3DCD2] hover:bg-white text-[#706558] hover:text-[#1B3322]'
               }`}
             >
               Todos os Itens
@@ -148,8 +148,8 @@ export function Cardapio({
                 onClick={() => setSelectedCategory(cat.nome)}
                 className={`px-5 py-2.5 rounded-2xl font-bold text-sm transition-all whitespace-nowrap cursor-pointer snap-start ${
                   selectedCategory === cat.nome
-                    ? 'bg-[#0077BE] text-white shadow-lg shadow-blue-100'
-                    : 'bg-transparent border border-[#E8E2D9] hover:bg-white text-[#5C6B73] hover:text-[#1A2E35]'
+                    ? 'bg-[#1E5E3A] text-white shadow-lg shadow-green-100'
+                    : 'bg-transparent border border-[#E3DCD2] hover:bg-white text-[#706558] hover:text-[#1B3322]'
                 }`}
               >
                 {cat.nome}
@@ -171,11 +171,11 @@ export function Cardapio({
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.2 }}
-                  className="bg-white p-4 rounded-[32px] shadow-sm hover:shadow-xl transition-all border border-transparent hover:border-[#0077BE] flex flex-col justify-between group"
+                  className="bg-white p-4 rounded-[32px] shadow-sm hover:shadow-xl transition-all border border-transparent hover:border-[#1E5E3A] flex flex-col justify-between group"
                 >
                   <div className="flex p-1 gap-4">
                     {/* Lazy-loaded-style premium card Image */}
-                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-[24px] overflow-hidden bg-[#F5F2ED] border border-[#E8E2D9] flex-shrink-0 relative">
+                    <div className="w-24 h-24 md:w-28 md:h-28 rounded-[24px] overflow-hidden bg-[#F4EFE6] border border-[#E3DCD2] flex-shrink-0 relative">
                       <img
                         src={prod.imagem}
                         alt={prod.nome}
@@ -192,7 +192,7 @@ export function Cardapio({
                         </div>
                       )}
                       {qtyInCart > 0 && prod.ativo && (
-                        <div className="absolute top-1 right-1 bg-[#0077BE] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md">
+                        <div className="absolute top-1 right-1 bg-[#1E5E3A] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                           {qtyInCart}
                         </div>
                       )}
@@ -202,20 +202,20 @@ export function Cardapio({
                     <div className="flex-1 min-w-0 flex flex-col justify-between">
                       <div>
                         <div className="flex items-start justify-between gap-2">
-                          <span className="text-[9px] font-bold text-[#0077BE] uppercase tracking-wider">
+                          <span className="text-[9px] font-bold text-[#1E5E3A] uppercase tracking-wider">
                             {prod.categoria}
                           </span>
                         </div>
-                        <h4 className="text-base font-bold text-[#1A2E35] mt-0.5 group-hover:text-[#0077BE] transition-colors truncate">
+                        <h4 className="text-base font-bold text-[#1B3322] mt-0.5 group-hover:text-[#1E5E3A] transition-colors truncate">
                           {prod.nome}
                         </h4>
-                        <p className="text-xs text-[#5C6B73] mt-1 line-clamp-2 font-medium leading-relaxed">
+                        <p className="text-xs text-[#706558] mt-1 line-clamp-2 font-medium leading-relaxed">
                           {prod.descricao}
                         </p>
                       </div>
 
                       <div className="mt-2 flex items-baseline justify-between gap-2">
-                        <span className="text-lg font-extrabold text-[#0077BE]">
+                        <span className="text-lg font-extrabold text-[#1E5E3A]">
                           R$ {prod.preco.toFixed(2)}
                         </span>
                       </div>
@@ -223,11 +223,11 @@ export function Cardapio({
                   </div>
 
                   {/* Quantity controls / Action button footer */}
-                  <div className="px-2 pb-2 pt-2 border-t border-[#F5F2ED] flex items-center justify-end mt-4 bg-transparent">
+                  <div className="px-2 pb-2 pt-2 border-t border-[#F4EFE6] flex items-center justify-end mt-4 bg-transparent">
                     {!prod.ativo ? (
                       <button
                         disabled
-                        className="w-full text-xs font-semibold text-[#A89F91] text-center py-2.5 bg-[#F5F2ED] rounded-xl"
+                        className="w-full text-xs font-semibold text-[#9C8E7B] text-center py-2.5 bg-[#F4EFE6] rounded-xl"
                       >
                         Indisponível no Momento
                       </button>
@@ -235,16 +235,16 @@ export function Cardapio({
                       <div className="flex items-center gap-3">
                         <button
                           onClick={() => onUpdateCartQuantity(prod.id, qtyInCart - 1)}
-                          className="w-8 h-8 rounded-xl bg-[#F5F2ED] border border-[#E8E2D9] flex items-center justify-center text-[#5C6B73] hover:text-[#1A2E35] hover:bg-[#E8E2D9] transition-all cursor-pointer"
+                          className="w-8 h-8 rounded-xl bg-[#F4EFE6] border border-[#E3DCD2] flex items-center justify-center text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2] transition-all cursor-pointer"
                         >
                           <Minus className="h-4 w-4" />
                         </button>
-                        <span className="text-sm font-extrabold w-6 text-center text-[#1A2E35]">
+                        <span className="text-sm font-extrabold w-6 text-center text-[#1B3322]">
                           {qtyInCart}
                         </span>
                         <button
                           onClick={() => onUpdateCartQuantity(prod.id, qtyInCart + 1)}
-                          className="w-8 h-8 rounded-xl bg-[#0077BE] text-white flex items-center justify-center hover:bg-opacity-90 transition-all cursor-pointer shadow-md shadow-blue-100"
+                          className="w-8 h-8 rounded-xl bg-[#1E5E3A] text-white flex items-center justify-center hover:bg-opacity-90 transition-all cursor-pointer shadow-md shadow-green-100"
                         >
                           <Plus className="h-4 w-4" />
                         </button>
@@ -252,7 +252,7 @@ export function Cardapio({
                     ) : (
                       <button
                         onClick={() => onUpdateCartQuantity(prod.id, 1)}
-                        className="w-full py-3 rounded-2xl bg-[#F5F2ED] hover:bg-[#0077BE] hover:text-white transition-colors font-bold text-sm text-[#0077BE] flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full py-3 rounded-2xl bg-[#F4EFE6] hover:bg-[#1E5E3A] hover:text-white transition-colors font-bold text-sm text-[#1E5E3A] flex items-center justify-center gap-2 cursor-pointer"
                       >
                         <Plus className="h-4 w-4" />
                         <span>Adicionar</span>
@@ -265,10 +265,10 @@ export function Cardapio({
           </AnimatePresence>
 
           {filteredProdutos.length === 0 && (
-            <div className="col-span-1 md:col-span-2 py-16 text-center space-y-3 bg-white border border-[#E8E2D9] rounded-[32px] p-8 shadow-sm">
+            <div className="col-span-1 md:col-span-2 py-16 text-center space-y-3 bg-white border border-[#E3DCD2] rounded-[32px] p-8 shadow-sm">
               <div className="text-5xl">🥥</div>
-              <h4 className="text-base font-bold text-[#1A2E35]">Nenhum item encontrado</h4>
-              <p className="text-xs text-[#5C6B73] max-w-xs mx-auto">
+              <h4 className="text-base font-bold text-[#1B3322]">Nenhum item encontrado</h4>
+              <p className="text-xs text-[#706558] max-w-xs mx-auto">
                 Tente redefinir a busca ou selecione outra categoria. Estamos abastecidos com águas frescas e ótimos petiscos!
               </p>
             </div>
@@ -283,12 +283,12 @@ export function Cardapio({
             <button
               id="view-cart-floating-button"
               onClick={onOpenCart}
-              className="w-full bg-[#0077BE] text-white font-extrabold rounded-2xl py-4 px-6 flex items-center justify-between shadow-xl shadow-blue-200 cursor-pointer hover:bg-opacity-95 active:scale-[0.99] transition-all"
+              className="w-full bg-[#1E5E3A] text-white font-extrabold rounded-2xl py-4 px-6 flex items-center justify-between shadow-xl shadow-green-100 cursor-pointer hover:bg-opacity-95 active:scale-[0.99] transition-all"
             >
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <ShoppingBag className="h-5 w-5 text-white" />
-                  <span className="absolute -top-2 -right-2.5 bg-[#F27D26] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border border-white shadow-md">
+                  <span className="absolute -top-2 -right-2.5 bg-[#7F5539] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border border-white shadow-md">
                     {cartItemCount}
                   </span>
                 </div>

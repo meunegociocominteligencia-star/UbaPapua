@@ -117,11 +117,11 @@ export const DEFAULT_PRODUTOS: Produto[] = [
 ];
 
 export const DEFAULT_CONFIG: ConfigEstabelecimento = {
-  nome: 'Quiosque Bella Costa',
-  logo: '🌊',
+  nome: 'UbáPapuá',
+  logo: '🥥',
   telefone: '(11) 99999-8888',
   endereco: 'Av. Beira Mar, Quiosque 42 - Praia Central, Ubatuba/SP',
   taxa_servico: 10, // 10%
-  mensagem_inicial: 'Bem-vindo ao Bella Costa! Desfrute de momentos inesquecíveis à beira-mar. Faça seu pedido diretamente por aqui!',
+  mensagem_inicial: 'Bem-vindo ao UbáPapuá! Desfrute de momentos inesquecíveis à beira-mar. Faça seu pedido diretamente por aqui!',
   horario_funcionamento: 'Todos os dias, das 08h às 20h'
 };
