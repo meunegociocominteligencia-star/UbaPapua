@@ -534,17 +534,35 @@ async function startServer() {
   });
 
   app.post('/api/categories', (req, res) => {
-    const newCat = {
-      id: req.body.id || 'c_' + Math.random().toString(36).substr(2, 9),
-      nome: req.body.nome
-    };
-    if (categorias.some(c => c.nome.toLowerCase() === newCat.nome.toLowerCase())) {
-      res.status(400).json({ error: 'Categoria já existe' });
-      return;
+    try {
+      const nomeVal = (req.body && req.body.nome) ? String(req.body.nome).trim() : '';
+      if (!nomeVal) {
+        res.status(400).json({ error: 'Nome da categoria é obrigatório' });
+        return;
+      }
+
+      const newCat = {
+        id: req.body.id || 'c_' + Math.random().toString(36).substr(2, 9),
+        nome: nomeVal
+      };
+
+      const exists = categorias.some(c => {
+        const cNome = c && c.nome ? String(c.nome).toLowerCase().trim() : '';
+        return cNome === nomeVal.toLowerCase();
+      });
+
+      if (exists) {
+        res.status(400).json({ error: 'Categoria já existe' });
+        return;
+      }
+
+      categorias.push(newCat);
+      broadcastSSE({ type: 'category_created', category: newCat });
+      res.status(201).json(newCat);
+    } catch (err: any) {
+      console.error('Error in POST /api/categories:', err);
+      res.status(500).json({ error: 'Erro interno ao cadastrar categoria' });
     }
-    categorias.push(newCat);
-    broadcastSSE({ type: 'category_created', category: newCat });
-    res.status(201).json(newCat);
   });
 
   app.put('/api/categories/:id', (req, res) => {
@@ -640,20 +658,52 @@ async function startServer() {
   });
 
   app.post('/api/clients', (req, res) => {
-    const newClient = {
-      ...req.body,
-      id: req.body.id || 'c_' + Math.random().toString(36).substr(2, 9),
-      created_at: req.body.created_at || new Date().toISOString(),
-      telefone: req.body.telefone || req.body.celular
-    };
-    
-    // Check if duplicate
-    const exists = clientes.some(c => c.nome.toLowerCase() === newClient.nome.toLowerCase() && c.quiosque.toLowerCase() === newClient.quiosque.toLowerCase());
-    if (!exists) {
-      clientes.unshift(newClient);
-      broadcastSSE({ type: 'client_created', client: newClient });
+    try {
+      const nomeVal = (req.body && req.body.nome) ? String(req.body.nome).trim() : '';
+      const quiosqueVal = (req.body && req.body.quiosque) ? String(req.body.quiosque).trim() : '';
+      const telefoneVal = (req.body && (req.body.telefone || req.body.celular)) ? String(req.body.telefone || req.body.celular).trim() : '';
+
+      if (!nomeVal) {
+        res.status(400).json({ error: 'Nome do cliente é obrigatório' });
+        return;
+      }
+
+      if (!telefoneVal) {
+        res.status(400).json({ error: 'Telefone do cliente é obrigatório' });
+        return;
+      }
+
+      const cleanTel = telefoneVal.replace(/\D/g, '');
+
+      // Check if duplicate safely based on the cleaned phone number
+      const existingIndex = clientes.findIndex(c => {
+        const cTel = String(c.telefone || c.celular || '').replace(/\D/g, '');
+        return cTel === cleanTel;
+      });
+
+      const newClient = {
+        id: cleanTel || 'c_' + Math.random().toString(36).substr(2, 9),
+        nome: nomeVal,
+        quiosque: quiosqueVal,
+        celular: telefoneVal,
+        telefone: telefoneVal,
+        created_at: req.body.created_at || new Date().toISOString()
+      };
+
+      if (existingIndex !== -1) {
+        // Update existing client table or name session
+        clientes[existingIndex] = { ...clientes[existingIndex], ...newClient };
+        broadcastSSE({ type: 'client_updated', client: clientes[existingIndex] });
+        res.status(200).json(clientes[existingIndex]);
+      } else {
+        clientes.unshift(newClient);
+        broadcastSSE({ type: 'client_created', client: newClient });
+        res.status(201).json(newClient);
+      }
+    } catch (err: any) {
+      console.error('Error in POST /api/clients:', err);
+      res.status(500).json({ error: 'Erro interno ao cadastrar cliente' });
     }
-    res.status(201).json(newClient);
   });
 
   app.put('/api/clients/:id', (req, res) => {

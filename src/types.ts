@@ -45,6 +45,7 @@ export interface Pedido {
   id: string;
   cliente_id?: string;
   cliente_nome: string;
+  cliente_telefone?: string;
   quiosque: string;
   status: OrderStatus;
   valor_total: number;

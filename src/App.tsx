@@ -202,6 +202,7 @@ export default function App() {
           const mappedOrders = orderData.map((o: any) => ({
             id: o.id,
             cliente_nome: o.cliente_nome,
+            cliente_telefone: o.cliente_telefone || '',
             quiosque: o.quiosque,
             status: o.status,
             valor_total: parseFloat(o.valor_total),
@@ -237,10 +238,10 @@ export default function App() {
     // Fetch immediately when entering Meus Pedidos
     fetchOrders();
 
-    // Set up an 8-second interval for guaranteed updates (bypasses mobile/tablet webview background socket suspends)
+    // Set up a 3-second interval for constant real-time delivery progress updates
     const interval = setInterval(() => {
       fetchOrders();
-    }, 8000);
+    }, 3000);
 
     return () => clearInterval(interval);
   }, [activeView, fetchOrders]);
@@ -451,6 +452,7 @@ export default function App() {
               .insert({
                 id: orderId,
                 cliente_nome: order.cliente_nome,
+                cliente_telefone: order.cliente_telefone || '',
                 quiosque: order.quiosque,
                 status: order.status,
                 valor_total: order.valor_total,
@@ -521,12 +523,13 @@ export default function App() {
     const realSupabase = getSupabase();
     if (realSupabase && hasSupabaseConfig) {
       try {
-        await realSupabase.from('clientes').insert({
+        await realSupabase.from('clientes').upsert({
+          telefone: celular,
           nome,
           quiosque,
           celular,
-          telefone: celular
-        });
+          created_at: new Date().toISOString()
+        }, { onConflict: 'telefone' });
       } catch (err) {
         console.error('Error inserting client into Supabase:', err);
       }
@@ -603,6 +606,7 @@ export default function App() {
     const newOrder: Pedido = {
       id: generateUUID(),
       cliente_nome: clienteNome || 'Cliente Anônimo',
+      cliente_telefone: clienteCelular || '',
       quiosque: clienteQuiosque || 'Quiosque',
       status: 'Recebido',
       valor_total: subtotal,
@@ -649,6 +653,7 @@ export default function App() {
             const { error: ordErr } = await realSupabase.from('pedidos').insert({
               id: orderId,
               cliente_nome: newOrder.cliente_nome,
+              cliente_telefone: newOrder.cliente_telefone || '',
               quiosque: newOrder.quiosque,
               status: newOrder.status,
               valor_total: newOrder.valor_total,
@@ -1333,13 +1338,22 @@ export default function App() {
   useEffect(() => {
     const fetchLocalHistories = async () => {
       const cachedHistories = await offlineDB.getOrderHistories();
-      // Combine with active orders matching customer's name and table location
-      const matchingActive = orders.filter(
-        (o) => o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque
+      
+      // Filter cached history list by customer's phone number
+      const filteredCached = cachedHistories.filter(
+        (o) => o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque)
       );
 
+      // Combine with active orders matching customer's phone number or name/kiosk fallback
+      const matchingActive = orders.filter((o) => {
+        if (clienteCelular && o.cliente_telefone) {
+          return o.cliente_telefone === clienteCelular;
+        }
+        return o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque;
+      });
+
       // Unique-fy based on order ID
-      const allMerged = [...matchingActive, ...cachedHistories];
+      const allMerged = [...matchingActive, ...filteredCached];
       const unique = allMerged.filter(
         (value, index, self) => self.findIndex((o) => o.id === value.id) === index
       );
@@ -1352,7 +1366,7 @@ export default function App() {
     if (clienteNome && clienteQuiosque) {
       fetchLocalHistories();
     }
-  }, [orders, clienteNome, clienteQuiosque]);
+  }, [orders, clienteNome, clienteQuiosque, clienteCelular]);
 
   return (
     <div className="relative min-h-screen bg-[#FDFBF7] text-[#1A2E35] font-sans selection:bg-[#0077BE] selection:text-white pb-16">

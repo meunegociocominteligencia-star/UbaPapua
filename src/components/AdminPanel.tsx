@@ -630,10 +630,6 @@ export function AdminPanel({
     const priceNum = parseFloat(prodForm.preco);
     if (!prodForm.nome.trim() || isNaN(priceNum)) return;
 
-    const isFoodOrSnack = ['comida', 'petisco', 'prato', 'refeição', 'refeicoes', 'porção', 'porções', 'sobremesa'].some(
-      word => prodForm.categoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(word)
-    );
-
     const estoqueVal = prodForm.estoque.trim();
     const estoqueNum = estoqueVal !== '' ? parseInt(estoqueVal, 10) : null;
 
@@ -644,7 +640,7 @@ export function AdminPanel({
       categoria: prodForm.categoria,
       imagem: prodForm.imagem.trim() || 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80',
       ativo: prodForm.ativo,
-      estoque: isFoodOrSnack ? null : (estoqueNum !== null && !isNaN(estoqueNum) ? estoqueNum : null)
+      estoque: estoqueNum !== null && !isNaN(estoqueNum) ? estoqueNum : null
     };
 
     if (editingProduct) {
@@ -1449,26 +1445,18 @@ export function AdminPanel({
                       />
                     </div>
 
-                    {/* Conditional stock field if not food/snack */}
-                    {['comida', 'petisco', 'prato', 'refeição', 'refeicoes', 'porção', 'porções', 'sobremesa'].some(
-                      word => prodForm.categoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(word)
-                    ) ? (
-                      <div className="md:col-span-2 bg-[#F4EFE6]/50 border border-[#E3DCD2] px-3.5 py-2.5 rounded-xl text-[10px] font-bold text-[#706558] italic">
-                        🍳 Comidas, pratos e petiscos não possuem controle de estoque (estoque ilimitado).
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5 md:col-span-2">
-                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Quantidade em Estoque</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={prodForm.estoque}
-                          onChange={(e) => setProdForm({ ...prodForm, estoque: e.target.value })}
-                          placeholder="Ex: 50 (Deixe em branco para sem limite)"
-                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
-                        />
-                      </div>
-                    )}
+                    {/* Quantity in Stock field */}
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Quantidade em Estoque</label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={prodForm.estoque}
+                        onChange={(e) => setProdForm({ ...prodForm, estoque: e.target.value })}
+                        placeholder="Ex: 50 (Deixe em branco para sem limite)"
+                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
+                      />
+                    </div>
 
                     <div className="flex items-center gap-2 py-2 md:col-span-2">
                       <input

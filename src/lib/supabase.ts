@@ -52,13 +52,12 @@ CREATE TABLE IF NOT EXISTS produtos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Criar tabela de Clientes (Opcional, pois salvamos dados na sessão)
+-- 3. Criar tabela de Clientes (Chave primária por telefone)
 CREATE TABLE IF NOT EXISTS clientes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  telefone VARCHAR(50) PRIMARY KEY,
   nome VARCHAR(255) NOT NULL,
   quiosque VARCHAR(50) NOT NULL,
   celular VARCHAR(50),
-  telefone VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -66,6 +65,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 CREATE TABLE IF NOT EXISTS pedidos (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   cliente_nome VARCHAR(255) NOT NULL,
+  cliente_telefone VARCHAR(50),
   quiosque VARCHAR(50) NOT NULL,
   status VARCHAR(50) DEFAULT 'Recebido' NOT NULL,
   valor_total DECIMAL(10,2) NOT NULL,
