@@ -130,9 +130,16 @@ ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedido_itens ENABLE ROW LEVEL SECURITY;
 
 -- Políticas Públicas (Acesso livre para fins de demonstração simplificada)
+DROP POLICY IF EXISTS "Acesso público categorias" ON categorias;
 CREATE POLICY "Acesso público categorias" ON categorias FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público produtos" ON produtos;
 CREATE POLICY "Acesso público produtos" ON produtos FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público pedidos" ON pedidos;
 CREATE POLICY "Acesso público pedidos" ON pedidos FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público pedido_itens" ON pedido_itens;
 CREATE POLICY "Acesso público pedido_itens" ON pedido_itens FOR ALL USING (true) WITH CHECK (true);
 
 -- 7. Inserir Categorias Padrão
@@ -156,7 +163,7 @@ INSERT INTO produtos (nome, descricao, categoria, preco, imagem, ativo, ordem) V
   ('Filé de Dourada (Refeição p/ 2)', 'Nobre filé de dourada limpo, grelhado com azeite de oliva e servido com acompanhamentos finos. Serve 2 pessoas.', 'Refeições', 80.00, 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80', true, 7),
   ('Filé de Carne (Refeição p/ 2)', 'Delicioso filé de carne grelhado ao ponto do cliente, guarnecido de acompanhamentos. Serve 2 pessoas.', 'Refeições', 80.00, 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80', true, 8),
   ('Frango Frito (Refeição p/ 2)', 'Pedaços selecionados de frango crocantes por fora e macios por dentro, acompanhados de fritas ou arroz. Serve 2 pessoas.', 'Refeições', 65.00, 'https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=600&auto=format&fit=crop&q=80', true, 9),
-  ('Dourada (Prato Regional)', 'Prato individual de dourada fresca grelhada com arroz branco, feijão regional e farinha d\'água.', 'Prato Regional', 40.00, 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80', true, 10),
+  ('Dourada (Prato Regional)', 'Prato individual de dourada fresca grelhada com arroz branco, feijão regional e farinha d''água.', 'Prato Regional', 40.00, 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80', true, 10),
   ('Pirarucu (Prato Regional)', 'Delicioso pirarucu grelhado, acompanhado de arroz, feijão e farofa crocante.', 'Prato Regional', 40.00, 'https://images.unsplash.com/photo-1559847844-5315685d8cb6?w=600&auto=format&fit=crop&q=80', true, 11),
   ('Filé de Gó (Prato Regional)', 'Delicado filé de Gó servido com guarnições regionais quentes.', 'Prato Regional', 40.00, 'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=600&auto=format&fit=crop&q=80', true, 12),
   ('Bisteca Bovina (Prato Regional)', 'Corte saboroso de bisteca grelhada na chapa com acompanhamentos tradicionais.', 'Prato Regional', 40.00, 'https://images.unsplash.com/photo-1544025162-d76694265947?w=600&auto=format&fit=crop&q=80', true, 13),
@@ -201,6 +208,7 @@ CREATE TABLE IF NOT EXISTS usuarios_admin (
 ALTER TABLE usuarios_admin ENABLE ROW LEVEL SECURITY;
 
 -- Permitir acesso público de leitura e escrita (para fins de simplicidade e demonstração integrada)
+DROP POLICY IF EXISTS "Acesso público usuarios_admin" ON usuarios_admin;
 CREATE POLICY "Acesso público usuarios_admin" ON usuarios_admin FOR ALL USING (true) WITH CHECK (true);
 
 -- Inserir os usuários iniciais se não existirem

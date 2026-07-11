@@ -280,7 +280,10 @@ export default function App() {
 
           const { data: clientData } = await realSupabase.from('clientes').select('*').order('created_at', { ascending: false });
           if (clientData) {
-            setClientes(clientData);
+            setClientes(clientData.map((c: any) => ({
+              id: c.telefone || c.celular || 'c_' + Math.random().toString(36).substr(2, 9),
+              ...c
+            })));
           }
 
           await fetchOrders();
@@ -312,7 +315,12 @@ export default function App() {
         .channel('public:clientes')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
           realSupabase.from('clientes').select('*').order('created_at', { ascending: false }).then(({ data }) => {
-            if (data) setClientes(data);
+            if (data) {
+              setClientes(data.map((c: any) => ({
+                id: c.telefone || c.celular || 'c_' + Math.random().toString(36).substr(2, 9),
+                ...c
+              })));
+            }
           });
         })
         .subscribe();
@@ -1138,10 +1146,19 @@ export default function App() {
         if (error) throw error;
         
         if (data && data[0]) {
-          setClientes((prev) => [data[0], ...prev]);
+          const mappedNew = {
+            id: data[0].telefone || data[0].celular || 'c_' + Math.random().toString(36).substr(2, 9),
+            ...data[0]
+          };
+          setClientes((prev) => [mappedNew, ...prev]);
         } else {
           const { data: allClis } = await realSupabase.from('clientes').select('*').order('created_at', { ascending: false });
-          if (allClis) setClientes(allClis);
+          if (allClis) {
+            setClientes(allClis.map((c: any) => ({
+              id: c.telefone || c.celular || 'c_' + Math.random().toString(36).substr(2, 9),
+              ...c
+            })));
+          }
         }
       } else {
         const res = await fetch('/api/clients', {
@@ -1171,8 +1188,13 @@ export default function App() {
         ...cli,
         telefone: cli.telefone || cli.celular
       };
-      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
-        const { error } = await realSupabase.from('clientes').update(clientData).eq('id', id);
+      if (realSupabase && hasSupabaseConfig) {
+        const { error } = await realSupabase.from('clientes').update({
+          nome: clientData.nome,
+          quiosque: clientData.quiosque,
+          celular: clientData.celular,
+          telefone: clientData.telefone
+        }).eq('telefone', id);
         if (error) throw error;
         
         setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...clientData } : c)));
@@ -1187,7 +1209,7 @@ export default function App() {
         
         setClientes((prev) => prev.map((c) => (c.id === id ? updatedCli : c)));
       }
-      showToast('Perfil do cliente atualizado com sucesso.', 'success');
+      showToast('Perfil do cliente updated com sucesso.', 'success');
     } catch (err: any) {
       console.error('Failed to update client:', err);
       showToast(`Erro ao atualizar cliente: ${err.message || err}`, 'error');
@@ -1197,8 +1219,8 @@ export default function App() {
   const handleDeleteClient = async (id: string) => {
     try {
       const realSupabase = getSupabase();
-      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
-        const { error } = await realSupabase.from('clientes').delete().eq('id', id);
+      if (realSupabase && hasSupabaseConfig) {
+        const { error } = await realSupabase.from('clientes').delete().eq('telefone', id);
         if (error) throw error;
         
         setClientes((prev) => prev.filter((c) => c.id !== id));
