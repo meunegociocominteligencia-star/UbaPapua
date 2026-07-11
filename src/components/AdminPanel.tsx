@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   TrendingUp,
   ShoppingBag,
@@ -30,7 +30,8 @@ import {
   BarChart3,
   PieChart as PieIcon,
   User,
-  UserPlus
+  UserPlus,
+  Users
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -98,7 +99,7 @@ export function AdminPanel({
   onClose,
   supabaseStatus
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports' | 'clientes'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports' | 'clientes' | 'team'>('orders');
   
   // Administrative & Waiter Session Auth State
   const [adminUser, setAdminUser] = useState<'admin' | 'garcom' | null>(() => {
@@ -109,9 +110,30 @@ export function AdminPanel({
     } catch {}
     return null;
   });
+  const [loggedUser, setLoggedUser] = useState<any | null>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = window.localStorage.getItem('logged_user');
+        return stored ? JSON.parse(stored) : null;
+      }
+    } catch {}
+    return null;
+  });
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Team management states
+  const [teamUsers, setTeamUsers] = useState<any[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
+  const [editingUser, setEditingUser] = useState<any | null>(null);
+  const [userForm, setUserForm] = useState({
+    nome: '',
+    usuario: '',
+    senha: '',
+    regra: 'garcom' as 'admin' | 'garcom'
+  });
 
   // Waiter Order Creation Modal State
   const [isAddingOrder, setIsAddingOrder] = useState(false);
@@ -123,42 +145,180 @@ export function AdminPanel({
   });
   const [orderCategoryFilter, setOrderCategoryFilter] = useState('all');
 
-  const handleAdminLogin = (e: React.FormEvent) => {
+  const fetchTeamUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      const res = await fetch('/api/admin/users');
+      if (res.ok) {
+        const data = await res.json();
+        setTeamUsers(data);
+      }
+    } catch (err) {
+      console.error('Error fetching team users:', err);
+    } finally {
+      setIsLoadingUsers(false);
+    }
+  };
+
+  useEffect(() => {
+    if (adminUser === 'admin') {
+      fetchTeamUsers();
+    }
+  }, [adminUser]);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const user = usernameInput.trim().toLowerCase();
     const pass = passwordInput;
 
-    if (user === 'admin' && pass === 'admin') {
+    try {
+      const res = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ usuario: user, senha: pass })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.user) {
+          setAdminUser(data.user.regra);
+          setLoggedUser(data.user);
+          try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+              window.localStorage.setItem('admin_role', data.user.regra);
+              window.localStorage.setItem('logged_user', JSON.stringify(data.user));
+            }
+          } catch {}
+          setLoginError('');
+          if (data.user.regra === 'garcom') {
+            setActiveTab('orders');
+          }
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('Backend login error, falling back to local verification.', err);
+    }
+
+    // Fallback Local Simulation
+    if ((user === 'admin' && pass === '123') || (user === 'admin' && pass === 'admin')) {
+      const simulated = { id: 'u-1', nome: 'Administrador Principal', usuario: 'admin', regra: 'admin' as const };
       setAdminUser('admin');
+      setLoggedUser(simulated);
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem('admin_role', 'admin');
+          window.localStorage.setItem('logged_user', JSON.stringify(simulated));
         }
       } catch {}
       setLoginError('');
-    } else if ((user === 'garcom' || user === 'garcom' || user === 'garçom') && pass === 'garcom') {
+    } else if (
+      (user === 'garcom' && pass === '123') ||
+      (user === 'garcom' && pass === 'garcom') ||
+      (user === 'garçom' && pass === 'garcom') ||
+      (user === 'garçom' && pass === '123')
+    ) {
+      const simulated = { id: 'u-2', nome: 'Garçom Padrão', usuario: 'garcom', regra: 'garcom' as const };
       setAdminUser('garcom');
+      setLoggedUser(simulated);
       try {
         if (typeof window !== 'undefined' && window.localStorage) {
           window.localStorage.setItem('admin_role', 'garcom');
+          window.localStorage.setItem('logged_user', JSON.stringify(simulated));
         }
       } catch {}
       setLoginError('');
-      setActiveTab('orders'); // Waiters start on orders tab
+      setActiveTab('orders');
     } else {
-      setLoginError('Login ou senha incorretos. Tente admin/admin ou garcom/garcom.');
+      setLoginError('Login ou senha incorretos. Tente admin/123 ou garcom/123.');
     }
   };
 
   const handleAdminLogout = () => {
     setAdminUser(null);
+    setLoggedUser(null);
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         window.localStorage.removeItem('admin_role');
+        window.localStorage.removeItem('logged_user');
       }
     } catch {}
     setUsernameInput('');
     setPasswordInput('');
+  };
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userForm.nome.trim() || !userForm.usuario.trim() || !userForm.senha.trim()) {
+      alert('Por favor, preencha todos os campos do usuário.');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userForm)
+      });
+      if (res.ok) {
+        setUserForm({ nome: '', usuario: '', senha: '', regra: 'garcom' });
+        setIsAddingUser(false);
+        fetchTeamUsers();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Erro ao cadastrar usuário.');
+      }
+    } catch (err) {
+      console.error('Error creating user:', err);
+      alert('Erro de conexão ao cadastrar usuário.');
+    }
+  };
+
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    if (!editingUser.nome.trim() || !editingUser.usuario.trim()) {
+      alert('Por favor, preencha nome e usuário.');
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editingUser)
+      });
+      if (res.ok) {
+        setEditingUser(null);
+        fetchTeamUsers();
+      } else {
+        const errData = await res.json();
+        alert(errData.error || 'Erro ao atualizar usuário.');
+      }
+    } catch (err) {
+      console.error('Error updating user:', err);
+      alert('Erro de conexão ao atualizar usuário.');
+    }
+  };
+
+  const handleDeleteUser = async (id: string) => {
+    if (id === 'u-1' || id === 'u-2') {
+      alert('Este usuário padrão do sistema não pode ser removido.');
+      return;
+    }
+    if (!confirm('Deseja realmente remover este usuário da equipe?')) return;
+
+    try {
+      const res = await fetch(`/api/admin/users/${id}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        fetchTeamUsers();
+      } else {
+        alert('Erro ao remover usuário.');
+      }
+    } catch (err) {
+      console.error('Error deleting user:', err);
+    }
   };
 
   const handleSaveWaiterOrder = async (e: React.FormEvent) => {
@@ -888,6 +1048,18 @@ export function AdminPanel({
 
             {adminUser === 'admin' && (
               <>
+                <button
+                  onClick={() => setActiveTab('team')}
+                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                    activeTab === 'team'
+                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  }`}
+                >
+                  <Users className="h-4 w-4" />
+                  <span>Gerenciar Equipe</span>
+                </button>
+
                 <button
                   onClick={() => setActiveTab('settings')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
@@ -2280,6 +2452,226 @@ export function AdminPanel({
                   </button>
                 </div>
               </form>
+            </div>
+          )}
+
+          {activeTab === 'team' && (
+            <div className="space-y-6">
+              <div className="border-b border-[#E3DCD2] pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+                <div>
+                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Gerenciamento de Equipe</h2>
+                  <p className="text-xs text-[#706558]">Cadastre garçons e administradores para gerenciar permissões e acessos restritos</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingUser(null);
+                    setUserForm({ nome: '', usuario: '', senha: '', regra: 'garcom' });
+                    setIsAddingUser(true);
+                  }}
+                  className="px-4 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-green-100 flex items-center justify-center gap-1.5 self-start sm:self-auto"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Cadastrar Colaborador</span>
+                </button>
+              </div>
+
+              {/* Form Modal / Panel */}
+              {(isAddingUser || editingUser) && (
+                <div className="p-5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-2xl space-y-4 shadow-sm relative">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider">
+                      {editingUser ? 'Editar Colaborador' : 'Novo Colaborador'}
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddingUser(false);
+                        setEditingUser(null);
+                      }}
+                      className="p-1 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-lg text-[#706558] cursor-pointer"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+
+                  <form onSubmit={editingUser ? handleUpdateUser : handleCreateUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase tracking-wider block">Nome Completo</label>
+                      <input
+                        type="text"
+                        value={editingUser ? editingUser.nome : userForm.nome}
+                        onChange={(e) => {
+                          if (editingUser) setEditingUser({ ...editingUser, nome: e.target.value });
+                          else setUserForm({ ...userForm, nome: e.target.value });
+                        }}
+                        placeholder="Ex: João Silva"
+                        required
+                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase tracking-wider block">Nome de Usuário (Login)</label>
+                      <input
+                        type="text"
+                        value={editingUser ? editingUser.usuario : userForm.usuario}
+                        onChange={(e) => {
+                          if (editingUser) setEditingUser({ ...editingUser, usuario: e.target.value.trim().toLowerCase() });
+                          else setUserForm({ ...userForm, usuario: e.target.value.trim().toLowerCase() });
+                        }}
+                        placeholder="Ex: joao.garcom"
+                        required
+                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase tracking-wider block">
+                        {editingUser ? 'Nova Senha (deixe em branco para manter)' : 'Senha de Acesso'}
+                      </label>
+                      <input
+                        type="password"
+                        value={editingUser ? (editingUser.senha || '') : userForm.senha}
+                        onChange={(e) => {
+                          if (editingUser) setEditingUser({ ...editingUser, senha: e.target.value });
+                          else setUserForm({ ...userForm, senha: e.target.value });
+                        }}
+                        placeholder={editingUser ? 'Senha inalterada' : 'Defina a senha'}
+                        required={!editingUser}
+                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase tracking-wider block">Função / Cargo</label>
+                      <select
+                        value={editingUser ? editingUser.regra : userForm.regra}
+                        onChange={(e) => {
+                          const val = e.target.value as 'admin' | 'garcom';
+                          if (editingUser) setEditingUser({ ...editingUser, regra: val });
+                          else setUserForm({ ...userForm, regra: val });
+                        }}
+                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                      >
+                        <option value="garcom">Garçom (Acesso apenas a Pedidos)</option>
+                        <option value="admin">Administrador (Acesso Completo)</option>
+                      </select>
+                    </div>
+
+                    <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingUser(false);
+                          setEditingUser(null);
+                        }}
+                        className="px-4 py-2 bg-[#F4EFE6] hover:bg-[#E3DCD2] text-[#706558] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/95 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-green-100"
+                      >
+                        {editingUser ? 'Atualizar Dados' : 'Salvar Cadastro'}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Users List Table */}
+              <div className="bg-[#FCFBF9] border border-[#E3DCD2] rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-4 bg-white border-b border-[#E3DCD2] flex justify-between items-center">
+                  <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider">Membros da Equipe</h3>
+                  <span className="text-[10px] font-bold bg-[#F4EFE6] text-[#706558] px-2.5 py-0.5 rounded-full">
+                    {teamUsers.length} usuários
+                  </span>
+                </div>
+
+                {isLoadingUsers ? (
+                  <div className="p-12 text-center text-xs font-bold text-[#706558]">
+                    Carregando membros da equipe...
+                  </div>
+                ) : teamUsers.length === 0 ? (
+                  <div className="p-12 text-center text-xs font-semibold text-[#9C8E7B] space-y-1">
+                    <p>Nenhum garçom ou administrador cadastrado.</p>
+                    <p className="text-[10px] font-normal">Use o botão acima para adicionar membros à equipe.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="bg-[#F4EFE6]/40 border-b border-[#E3DCD2] text-[10px] font-extrabold text-[#706558] uppercase tracking-wider">
+                          <th className="py-3 px-4">Nome</th>
+                          <th className="py-3 px-4">Usuário / Login</th>
+                          <th className="py-3 px-4 text-center">Nível de Acesso</th>
+                          <th className="py-3 px-4 text-center">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {teamUsers.map((user) => (
+                          <tr key={user.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-white transition-all">
+                            <td className="py-3.5 px-4 text-xs font-bold text-[#1B3322]">
+                              <div className="flex items-center gap-2">
+                                <div className={`w-7 h-7 rounded-full flex items-center justify-center font-extrabold text-[10px] ${
+                                  user.regra === 'admin' 
+                                    ? 'bg-[#1E5E3A]/10 text-[#1E5E3A]' 
+                                    : 'bg-amber-500/10 text-amber-700'
+                                }`}>
+                                  {user.nome.charAt(0).toUpperCase()}
+                                </div>
+                                <span>{user.nome}</span>
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-xs text-[#706558] font-semibold">
+                              {user.usuario}
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold uppercase border ${
+                                user.regra === 'admin'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : 'bg-amber-50 text-amber-700 border-amber-200'
+                              }`}>
+                                {user.regra === 'admin' ? 'Administrador' : 'Garçom'}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 text-center">
+                              <div className="flex gap-1.5 justify-center">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingUser({ ...user, senha: '' });
+                                    setIsAddingUser(false);
+                                  }}
+                                  className="p-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-lg text-[#706558] transition-all cursor-pointer"
+                                  title="Editar"
+                                >
+                                  <Edit2 className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  disabled={user.id === 'u-1' || user.id === 'u-2'}
+                                  className={`p-1.5 rounded-lg transition-all ${
+                                    user.id === 'u-1' || user.id === 'u-2'
+                                      ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
+                                      : 'bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 cursor-pointer'
+                                  }`}
+                                  title="Remover"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

@@ -67,3 +67,12 @@ export interface ConfigEstabelecimento {
   mensagem_inicial: string;
   horario_funcionamento: string;
 }
+
+export interface UsuarioAdmin {
+  id: string;
+  nome: string;
+  usuario: string;
+  senha?: string;
+  regra: 'admin' | 'garcom';
+  created_at?: string;
+}

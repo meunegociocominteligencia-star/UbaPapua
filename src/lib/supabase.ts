@@ -52,7 +52,16 @@ CREATE TABLE IF NOT EXISTS produtos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Criar tabela de Clientes (Chave primária por telefone)
+-- 3. Criar tabela de Clientes (Chave primária por telefone) de forma segura
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'clientes' AND column_name = 'id') THEN
+    ALTER TABLE clientes RENAME TO clientes_old;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  -- ignora erros se a tabela não puder ser renomeada
+END $$;
+
 CREATE TABLE IF NOT EXISTS clientes (
   telefone VARCHAR(50) PRIMARY KEY,
   nome VARCHAR(255) NOT NULL,
@@ -60,6 +69,34 @@ CREATE TABLE IF NOT EXISTS clientes (
   celular VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
+
+-- Copiar dados da tabela antiga de forma condicional e segura se ela existir
+DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'clientes_old') THEN
+    IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'clientes_old' AND column_name = 'telefone') AND EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'clientes_old' AND column_name = 'celular') THEN
+      INSERT INTO clientes (telefone, nome, quiosque, celular, created_at)
+      SELECT COALESCE(telefone, celular, '0000000000'), nome, quiosque, celular, created_at
+      FROM clientes_old
+      ON CONFLICT (telefone) DO NOTHING;
+    ELSIF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'clientes_old' AND column_name = 'telefone') THEN
+      INSERT INTO clientes (telefone, nome, quiosque, celular, created_at)
+      SELECT COALESCE(telefone, '0000000000'), nome, quiosque, telefone, created_at
+      FROM clientes_old
+      ON CONFLICT (telefone) DO NOTHING;
+    ELSIF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'clientes_old' AND column_name = 'celular') THEN
+      INSERT INTO clientes (telefone, nome, quiosque, celular, created_at)
+      SELECT COALESCE(celular, '0000000000'), nome, quiosque, celular, created_at
+      FROM clientes_old
+      ON CONFLICT (telefone) DO NOTHING;
+    ELSE
+      INSERT INTO clientes (telefone, nome, quiosque, celular, created_at)
+      SELECT COALESCE(id::text, '0000000000'), nome, quiosque, '', created_at
+      FROM clientes_old
+      ON CONFLICT (telefone) DO NOTHING;
+    END IF;
+  END IF;
+END $$;
 
 -- 4. Criar tabela de Pedidos
 CREATE TABLE IF NOT EXISTS pedidos (
@@ -149,4 +186,26 @@ INSERT INTO produtos (nome, descricao, categoria, preco, imagem, ativo, ordem) V
   ('Cerveja Heineken Long Neck', 'Puro malte, estupidamente gelada.', 'Bebidas', 12.00, 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=600&auto=format&fit=crop&q=80', true, 37),
   ('Gin Tônica Tropical', 'Gin premium, água tônica, fatias de laranja e maracujá fresco.', 'Drinks', 28.00, 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=600&auto=format&fit=crop&q=80', true, 38)
 ON CONFLICT DO NOTHING;
+
+-- 9. Criar tabela de Usuários Admin/Garçom para controle de acesso restrito
+CREATE TABLE IF NOT EXISTS usuarios_admin (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome VARCHAR(255) NOT NULL,
+  usuario VARCHAR(100) UNIQUE NOT NULL,
+  senha VARCHAR(255) NOT NULL,
+  regra VARCHAR(50) DEFAULT 'garcom' NOT NULL, -- 'admin' ou 'garcom'
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ativar RLS para a tabela de usuários
+ALTER TABLE usuarios_admin ENABLE ROW LEVEL SECURITY;
+
+-- Permitir acesso público de leitura e escrita (para fins de simplicidade e demonstração integrada)
+CREATE POLICY "Acesso público usuarios_admin" ON usuarios_admin FOR ALL USING (true) WITH CHECK (true);
+
+-- Inserir os usuários iniciais se não existirem
+INSERT INTO usuarios_admin (nome, usuario, senha, regra) VALUES
+  ('Administrador', 'admin', '123', 'admin'),
+  ('Garçom Padrão', 'garcom', '123', 'garcom')
+ON CONFLICT (usuario) DO NOTHING;
 `;

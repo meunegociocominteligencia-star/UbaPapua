@@ -458,6 +458,12 @@ let clientes: any[] = [
   { id: 'c-demo-2', nome: 'Carlos Eduardo', quiosque: 'Espreguiçadeira 12', celular: '(91) 97777-6666', telefone: '(91) 97777-6666', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() }
 ];
 
+// Admin and Waiter users in-memory state
+let usuariosAdmin: any[] = [
+  { id: 'u-1', nome: 'Administrador Principal', usuario: 'admin', senha: '123', regra: 'admin', created_at: new Date().toISOString() },
+  { id: 'u-2', nome: 'Garçom Padrão', usuario: 'garcom', senha: '123', regra: 'garcom', created_at: new Date().toISOString() }
+];
+
 // Active Server-Sent Events (SSE) connections for real-time updates
 let clients: any[] = [];
 
@@ -753,6 +759,113 @@ async function startServer() {
     });
     broadcastSSE({ type: 'bill_paid', quiosque, cliente_nome, pedidos });
     res.json({ success: true });
+  });
+
+  // --- API endpoints for user authentication and team management ---
+  app.post('/api/admin/login', (req, res) => {
+    try {
+      const { usuario, senha } = req.body;
+      if (!usuario || !senha) {
+        res.status(400).json({ error: 'Usuário e senha são obrigatórios' });
+        return;
+      }
+      const user = usuariosAdmin.find(
+        (u) => u.usuario.trim().toLowerCase() === usuario.trim().toLowerCase() && u.senha === senha
+      );
+      if (user) {
+        res.json({
+          success: true,
+          user: {
+            id: user.id,
+            nome: user.nome,
+            usuario: user.usuario,
+            regra: user.regra
+          }
+        });
+      } else {
+        res.status(401).json({ error: 'Usuário ou senha incorretos' });
+      }
+    } catch (err) {
+      console.error('Error in POST /api/admin/login:', err);
+      res.status(500).json({ error: 'Erro interno ao realizar login' });
+    }
+  });
+
+  app.get('/api/admin/users', (req, res) => {
+    res.json(usuariosAdmin);
+  });
+
+  app.post('/api/admin/users', (req, res) => {
+    try {
+      const { nome, usuario, senha, regra } = req.body;
+      if (!nome || !usuario || !senha || !regra) {
+        res.status(400).json({ error: 'Todos os campos são obrigatórios' });
+        return;
+      }
+      const exists = usuariosAdmin.some((u) => u.usuario.trim().toLowerCase() === usuario.trim().toLowerCase());
+      if (exists) {
+        res.status(400).json({ error: 'Este nome de usuário já está cadastrado' });
+        return;
+      }
+      const newUser = {
+        id: 'u_' + Math.random().toString(36).substr(2, 9),
+        nome,
+        usuario: usuario.trim().toLowerCase(),
+        senha,
+        regra,
+        created_at: new Date().toISOString()
+      };
+      usuariosAdmin.push(newUser);
+      broadcastSSE({ type: 'user_created', user: newUser });
+      res.status(201).json(newUser);
+    } catch (err) {
+      console.error('Error in POST /api/admin/users:', err);
+      res.status(500).json({ error: 'Erro interno ao cadastrar usuário' });
+    }
+  });
+
+  app.put('/api/admin/users/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nome, usuario, senha, regra } = req.body;
+      const index = usuariosAdmin.findIndex((u) => u.id === id);
+      if (index === -1) {
+        res.status(404).json({ error: 'Usuário não encontrado' });
+        return;
+      }
+      // Check for unique username
+      if (usuario) {
+        const dup = usuariosAdmin.some((u) => u.id !== id && u.usuario.trim().toLowerCase() === usuario.trim().toLowerCase());
+        if (dup) {
+          res.status(400).json({ error: 'Este nome de usuário já está cadastrado' });
+          return;
+        }
+      }
+      usuariosAdmin[index] = {
+        ...usuariosAdmin[index],
+        nome: nome || usuariosAdmin[index].nome,
+        usuario: usuario ? usuario.trim().toLowerCase() : usuariosAdmin[index].usuario,
+        senha: senha !== undefined ? senha : usuariosAdmin[index].senha,
+        regra: regra || usuariosAdmin[index].regra
+      };
+      broadcastSSE({ type: 'user_updated', user: usuariosAdmin[index] });
+      res.json(usuariosAdmin[index]);
+    } catch (err) {
+      console.error('Error in PUT /api/admin/users/:id:', err);
+      res.status(500).json({ error: 'Erro interno ao atualizar usuário' });
+    }
+  });
+
+  app.delete('/api/admin/users/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      usuariosAdmin = usuariosAdmin.filter((u) => u.id !== id);
+      broadcastSSE({ type: 'user_deleted', id });
+      res.json({ success: true });
+    } catch (err) {
+      console.error('Error in DELETE /api/admin/users/:id:', err);
+      res.status(500).json({ error: 'Erro interno ao excluir usuário' });
+    }
   });
 
   // Vite middleware for development

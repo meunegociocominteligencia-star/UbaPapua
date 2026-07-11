@@ -189,14 +189,14 @@ export function Cardapio({
                       {!prod.ativo && (
                         <div className="absolute inset-0 bg-white/85 flex items-center justify-center">
                           <span className="text-[10px] font-bold text-red-700 uppercase tracking-wider px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
-                            Esgotado
+                            Indisponível
                           </span>
                         </div>
                       )}
                       {prod.ativo && isOutOfStock && (
                         <div className="absolute inset-0 bg-white/85 flex items-center justify-center">
                           <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
-                            Não disponível
+                            Indisponível
                           </span>
                         </div>
                       )}
@@ -238,14 +238,14 @@ export function Cardapio({
                         disabled
                         className="w-full text-xs font-semibold text-[#9C8E7B] text-center py-2.5 bg-[#F4EFE6] rounded-xl"
                       >
-                        Indisponível no Momento
+                        Indisponível
                       </button>
                     ) : isOutOfStock ? (
                       <button
                         disabled
                         className="w-full text-xs font-bold text-red-600 text-center py-2.5 bg-red-50 border border-red-200 rounded-xl"
                       >
-                        Não disponível (Sem Estoque)
+                        Indisponível (Sem Estoque)
                       </button>
                     ) : qtyInCart > 0 ? (
                       <div className="flex items-center gap-3">
