@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS produtos (
   imagem TEXT,
   ativo BOOLEAN DEFAULT TRUE,
   ordem INT DEFAULT 0,
+  estoque INT, -- Controle de estoque simples (nulo para comida/petiscos)
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
@@ -57,6 +58,7 @@ CREATE TABLE IF NOT EXISTS clientes (
   nome VARCHAR(255) NOT NULL,
   quiosque VARCHAR(50) NOT NULL,
   celular VARCHAR(50),
+  telefone VARCHAR(50),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 

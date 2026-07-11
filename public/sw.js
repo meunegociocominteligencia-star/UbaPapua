@@ -62,21 +62,48 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request).then((response) => {
-        // Cache external image URLs from Unsplash for seamless offline displays
-        if (isUnsplash && response.status === 200) {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseClone);
-          });
+  // For document/HTML and JS/CSS assets, use Network-First to prevent stale white-screen bugs.
+  // For static assets like Unsplash images, fonts, and manifest, use Cache-First.
+  const isAssetOrHtml = event.request.destination === 'document' || 
+                        url.pathname === '/' || 
+                        url.pathname.endsWith('.html') || 
+                        url.pathname.includes('/assets/') ||
+                        url.pathname.endsWith('.js') ||
+                        url.pathname.endsWith('.css');
+
+  if (isAssetOrHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          return caches.match(event.request);
+        })
+    );
+  } else {
+    event.respondWith(
+      caches.match(event.request).then((cachedResponse) => {
+        if (cachedResponse) {
+          return cachedResponse;
         }
-        return response;
-      }); // No catch-all returning undefined, let network errors propagate naturally so the browser knows we are offline
-    })
-  );
+        return fetch(event.request).then((response) => {
+          // Cache external image URLs from Unsplash for seamless offline displays
+          if (response.status === 200 && (isUnsplash || url.pathname.includes('/manifest.json'))) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        });
+      })
+    );
+  }
 });

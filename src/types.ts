@@ -17,6 +17,7 @@ export interface Produto {
   imagem: string;
   ativo: boolean; // available or unavailable
   ordem?: number;
+  estoque?: number; // stock level, if undefined or null, it represents no stock control (like food and snacks)
   created_at?: string;
 }
 
@@ -25,6 +26,7 @@ export interface Cliente {
   nome: string;
   quiosque: string;
   celular?: string;
+  telefone?: string;
   created_at?: string;
 }
 

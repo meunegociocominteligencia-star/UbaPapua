@@ -343,6 +343,10 @@ export default function App() {
             offlineDB.saveCategorias(data.categorias);
           } else if (data.type === 'order_created') {
             setOrders((prev) => [data.order, ...prev]);
+            if (data.products) {
+              setProdutos(data.products);
+              offlineDB.saveProdutos(data.products);
+            }
             showToast(`Novo pedido recebido de ${data.order.cliente_nome}!`, 'success');
             // Play a small notification sound or buzz if supported
             if (navigator.vibrate) {
@@ -354,7 +358,16 @@ export default function App() {
             );
             showToast(`Pedido #${data.order.id.slice(-4).toUpperCase()} está ${data.order.status}!`, 'info');
           } else if (data.type === 'client_created') {
-            setClientes((prev) => [data.client, ...prev]);
+            setClientes((prev) => {
+              if (prev.some((c) => c.id === data.client.id)) return prev;
+              return [data.client, ...prev];
+            });
+          } else if (data.type === 'client_updated') {
+            setClientes((prev) =>
+              prev.map((c) => (c.id === data.client.id ? data.client : c))
+            );
+          } else if (data.type === 'client_deleted') {
+            setClientes((prev) => prev.filter((c) => c.id !== data.id));
           } else if (data.type === 'bill_requested') {
             setOrders((prev) =>
               prev.map((o) => {
@@ -503,7 +516,7 @@ export default function App() {
     safeStorage.setItem('cliente_nome', nome);
     safeStorage.setItem('cliente_quiosque', quiosque);
     safeStorage.setItem('cliente_celular', celular);
-
+  
     // Save to database
     const realSupabase = getSupabase();
     if (realSupabase && hasSupabaseConfig) {
@@ -511,7 +524,8 @@ export default function App() {
         await realSupabase.from('clientes').insert({
           nome,
           quiosque,
-          celular
+          celular,
+          telefone: celular
         });
       } catch (err) {
         console.error('Error inserting client into Supabase:', err);
@@ -521,7 +535,7 @@ export default function App() {
         await fetch('/api/clients', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, quiosque, celular })
+          body: JSON.stringify({ nome, quiosque, celular, telefone: celular })
         });
       } catch (err) {
         console.error('Error registering client locally:', err);
@@ -603,6 +617,20 @@ export default function App() {
     // Store in all historic tracker local for tracking status
     await offlineDB.saveOrderHistory(newOrder);
 
+    // Update local products stock state
+    setProdutos((prev) => {
+      const updated = prev.map((p) => {
+        const orderItem = orderItens.find((it) => it.produto_id === p.id);
+        if (orderItem && p.estoque !== undefined && p.estoque !== null) {
+          const newEstoque = Math.max(0, p.estoque - orderItem.quantidade);
+          return { ...p, estoque: newEstoque };
+        }
+        return p;
+      });
+      offlineDB.saveProdutos(updated);
+      return updated;
+    });
+
     if (networkStatus === 'offline') {
       // Queue it in local IndexedDB
       await offlineDB.savePendingOrder(newOrder);
@@ -641,6 +669,15 @@ export default function App() {
 
             const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
             if (itemsErr) throw itemsErr;
+
+            // Decrement stock in Supabase table
+            for (const item of newOrder.itens) {
+              const prod = produtos.find((p) => p.id === item.produto_id);
+              if (prod && prod.estoque !== undefined && prod.estoque !== null) {
+                const newEstoque = Math.max(0, prod.estoque - item.quantidade);
+                await realSupabase.from('produtos').update({ estoque: newEstoque }).eq('id', prod.id);
+              }
+            }
 
             syncedSuccessfully = true;
           } catch (supabaseErr) {
@@ -1084,6 +1121,95 @@ export default function App() {
     }
   };
 
+  const handleAddClient = async (cli: Omit<Cliente, 'id'>) => {
+    try {
+      const realSupabase = getSupabase();
+      const clientData = {
+        ...cli,
+        telefone: cli.telefone || cli.celular
+      };
+      if (realSupabase && hasSupabaseConfig) {
+        const { data, error } = await realSupabase.from('clientes').insert(clientData).select();
+        if (error) throw error;
+        
+        if (data && data[0]) {
+          setClientes((prev) => [data[0], ...prev]);
+        } else {
+          const { data: allClis } = await realSupabase.from('clientes').select('*').order('created_at', { ascending: false });
+          if (allClis) setClientes(allClis);
+        }
+      } else {
+        const res = await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clientData)
+        });
+        if (!res.ok) throw new Error('Falha ao cadastrar cliente no servidor');
+        const newCli = await res.json();
+        
+        setClientes((prev) => {
+          if (prev.some((c) => c.id === newCli.id)) return prev;
+          return [newCli, ...prev];
+        });
+      }
+      showToast('Cliente cadastrado com sucesso.', 'success');
+    } catch (err: any) {
+      console.error('Failed to add client:', err);
+      showToast(`Erro ao cadastrar cliente: ${err.message || err}`, 'error');
+    }
+  };
+
+  const handleUpdateClient = async (id: string, cli: Partial<Cliente>) => {
+    try {
+      const realSupabase = getSupabase();
+      const clientData = {
+        ...cli,
+        telefone: cli.telefone || cli.celular
+      };
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        const { error } = await realSupabase.from('clientes').update(clientData).eq('id', id);
+        if (error) throw error;
+        
+        setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...clientData } : c)));
+      } else {
+        const res = await fetch(`/api/clients/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clientData)
+        });
+        if (!res.ok) throw new Error('Falha ao atualizar cliente no servidor');
+        const updatedCli = await res.json();
+        
+        setClientes((prev) => prev.map((c) => (c.id === id ? updatedCli : c)));
+      }
+      showToast('Perfil do cliente atualizado com sucesso.', 'success');
+    } catch (err: any) {
+      console.error('Failed to update client:', err);
+      showToast(`Erro ao atualizar cliente: ${err.message || err}`, 'error');
+    }
+  };
+
+  const handleDeleteClient = async (id: string) => {
+    try {
+      const realSupabase = getSupabase();
+      if (realSupabase && hasSupabaseConfig && isValidUUID(id)) {
+        const { error } = await realSupabase.from('clientes').delete().eq('id', id);
+        if (error) throw error;
+        
+        setClientes((prev) => prev.filter((c) => c.id !== id));
+      } else {
+        const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+        if (!res.ok) throw new Error('Falha ao remover cliente no servidor');
+        
+        setClientes((prev) => prev.filter((c) => c.id !== id));
+      }
+      showToast('Cliente removido com sucesso.', 'info');
+    } catch (err: any) {
+      console.error('Failed to delete client:', err);
+      showToast(`Erro ao remover cliente: ${err.message || err}`, 'error');
+    }
+  };
+
   const handleUpdateConfig = async (conf: ConfigEstabelecimento) => {
     try {
       const realSupabase = getSupabase();
@@ -1380,6 +1506,9 @@ export default function App() {
               onDeleteCategory={handleDeleteCategory}
               onUpdateConfig={handleUpdateConfig}
               onSyncLocalToSupabase={handleSyncLocalToSupabase}
+              onAddClient={handleAddClient}
+              onUpdateClient={handleUpdateClient}
+              onDeleteClient={handleDeleteClient}
               supabaseStatus={supabaseStatus}
               onClose={() => {
                 if (clienteNome) {

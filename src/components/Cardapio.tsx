@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useMemo } from 'react';
-import { Search, Plus, Minus, ShoppingBag, Eye, HelpCircle } from 'lucide-react';
+import { Search, Plus, Minus, ShoppingBag, Eye, HelpCircle, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Produto, Categoria, ConfigEstabelecimento } from '../types';
 
@@ -79,9 +79,10 @@ export function Cardapio({
             <button
               id="change-identification-button"
               onClick={onLogout}
-              className="text-xs font-bold text-[#706558] hover:text-[#1E5E3A] transition-colors px-3 py-1.5 rounded-xl hover:bg-[#F4EFE6] border border-transparent hover:border-[#E3DCD2]"
+              className="text-xs font-bold text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors px-3 py-1.5 rounded-xl border border-transparent hover:border-red-200 flex items-center gap-1.5 cursor-pointer"
             >
-              Alterar
+              <LogOut className="h-3.5 w-3.5" />
+              <span>Sair (Logout)</span>
             </button>
           </div>
         </div>
@@ -163,6 +164,7 @@ export function Cardapio({
           <AnimatePresence mode="popLayout">
             {filteredProdutos.map((prod) => {
               const qtyInCart = cart[prod.id] || 0;
+              const isOutOfStock = prod.estoque !== undefined && prod.estoque !== null && prod.estoque <= 0;
               return (
                 <motion.div
                   key={prod.id}
@@ -181,7 +183,7 @@ export function Cardapio({
                         alt={prod.nome}
                         referrerPolicy="no-referrer"
                         className={`w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ${
-                          !prod.ativo ? 'opacity-40 grayscale' : ''
+                          !prod.ativo || isOutOfStock ? 'opacity-40 grayscale' : ''
                         }`}
                       />
                       {!prod.ativo && (
@@ -191,7 +193,14 @@ export function Cardapio({
                           </span>
                         </div>
                       )}
-                      {qtyInCart > 0 && prod.ativo && (
+                      {prod.ativo && isOutOfStock && (
+                        <div className="absolute inset-0 bg-white/85 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-red-600 uppercase tracking-wider px-2 py-1 bg-red-50 border border-red-200 rounded-lg">
+                            Não disponível
+                          </span>
+                        </div>
+                      )}
+                      {qtyInCart > 0 && prod.ativo && !isOutOfStock && (
                         <div className="absolute top-1 right-1 bg-[#1E5E3A] text-white text-xs font-black w-6 h-6 rounded-full flex items-center justify-center border-2 border-white shadow-md">
                           {qtyInCart}
                         </div>
@@ -230,6 +239,13 @@ export function Cardapio({
                         className="w-full text-xs font-semibold text-[#9C8E7B] text-center py-2.5 bg-[#F4EFE6] rounded-xl"
                       >
                         Indisponível no Momento
+                      </button>
+                    ) : isOutOfStock ? (
+                      <button
+                        disabled
+                        className="w-full text-xs font-bold text-red-600 text-center py-2.5 bg-red-50 border border-red-200 rounded-xl"
+                      >
+                        Não disponível (Sem Estoque)
                       </button>
                     ) : qtyInCart > 0 ? (
                       <div className="flex items-center gap-3">

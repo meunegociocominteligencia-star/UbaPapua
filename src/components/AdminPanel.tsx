@@ -28,7 +28,9 @@ import {
   Upload,
   Image as ImageIcon,
   BarChart3,
-  PieChart as PieIcon
+  PieChart as PieIcon,
+  User,
+  UserPlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -49,7 +51,7 @@ import {
   Area
 } from 'recharts';
 import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus, Cliente } from '../types';
-import { SUPABASE_SQL_SETUP, hasSupabaseConfig } from '../lib/supabase';
+import { SUPABASE_SQL_SETUP, hasSupabaseConfig, getSupabase } from '../lib/supabase';
 
 interface AdminPanelProps {
   orders: Pedido[];
@@ -67,6 +69,9 @@ interface AdminPanelProps {
   onDeleteCategory: (id: string) => void;
   onUpdateConfig: (conf: ConfigEstabelecimento) => void;
   onSyncLocalToSupabase?: () => Promise<void>;
+  onAddClient?: (cli: Omit<Cliente, 'id'>) => void;
+  onUpdateClient?: (id: string, cli: Partial<Cliente>) => void;
+  onDeleteClient?: (id: string) => void;
   onClose: () => void;
   supabaseStatus: 'connected' | 'disconnected' | 'unconfigured';
 }
@@ -87,10 +92,216 @@ export function AdminPanel({
   onDeleteCategory,
   onUpdateConfig,
   onSyncLocalToSupabase,
+  onAddClient,
+  onUpdateClient,
+  onDeleteClient,
   onClose,
   supabaseStatus
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports' | 'clientes'>('orders');
+  
+  // Administrative & Waiter Session Auth State
+  const [adminUser, setAdminUser] = useState<'admin' | 'garcom' | null>(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        return (window.localStorage.getItem('admin_role') as 'admin' | 'garcom') || null;
+      }
+    } catch {}
+    return null;
+  });
+  const [usernameInput, setUsernameInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  // Waiter Order Creation Modal State
+  const [isAddingOrder, setIsAddingOrder] = useState(false);
+  const [waiterOrderForm, setWaiterOrderForm] = useState({
+    cliente_nome: '',
+    quiosque: '',
+    observacoes: '',
+    itens: {} as { [prodId: string]: number }
+  });
+  const [orderCategoryFilter, setOrderCategoryFilter] = useState('all');
+
+  const handleAdminLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const user = usernameInput.trim().toLowerCase();
+    const pass = passwordInput;
+
+    if (user === 'admin' && pass === 'admin') {
+      setAdminUser('admin');
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('admin_role', 'admin');
+        }
+      } catch {}
+      setLoginError('');
+    } else if ((user === 'garcom' || user === 'garcom' || user === 'garçom') && pass === 'garcom') {
+      setAdminUser('garcom');
+      try {
+        if (typeof window !== 'undefined' && window.localStorage) {
+          window.localStorage.setItem('admin_role', 'garcom');
+        }
+      } catch {}
+      setLoginError('');
+      setActiveTab('orders'); // Waiters start on orders tab
+    } else {
+      setLoginError('Login ou senha incorretos. Tente admin/admin ou garcom/garcom.');
+    }
+  };
+
+  const handleAdminLogout = () => {
+    setAdminUser(null);
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.removeItem('admin_role');
+      }
+    } catch {}
+    setUsernameInput('');
+    setPasswordInput('');
+  };
+
+  const handleSaveWaiterOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!waiterOrderForm.cliente_nome.trim() || !waiterOrderForm.quiosque.trim()) {
+      alert('Por favor, digite o nome do cliente e a mesa/quiosque.');
+      return;
+    }
+
+    const activeItens = Object.entries(waiterOrderForm.itens)
+      .map(([prodId, qtyVal]) => {
+        const qty = qtyVal as number;
+        const prod = products.find((p) => p.id === prodId);
+        return {
+          produto_id: prodId,
+          produto_nome: prod?.nome || 'Produto',
+          quantidade: qty,
+          valor: prod?.preco || 0
+        };
+      })
+      .filter((it) => it.quantidade > 0);
+
+    if (activeItens.length === 0) {
+      alert('Selecione pelo menos um item para o pedido.');
+      return;
+    }
+
+    const subtotal = activeItens.reduce((acc, it) => acc + it.valor * it.quantidade, 0);
+    const taxAmount = (subtotal * config.taxa_servico) / 100;
+    const finalAmount = subtotal + taxAmount;
+
+    const newOrder: any = {
+      id: 'o_' + Math.random().toString(36).substr(2, 9),
+      cliente_nome: waiterOrderForm.cliente_nome.trim(),
+      quiosque: waiterOrderForm.quiosque.trim(),
+      status: 'Recebido',
+      valor_total: subtotal,
+      taxa_servico: taxAmount,
+      valor_final: finalAmount,
+      observacoes: waiterOrderForm.observacoes.trim(),
+      created_at: new Date().toISOString(),
+      itens: activeItens
+    };
+
+    let savedOnline = false;
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        const { error: ordErr } = await realSupabase.from('pedidos').insert({
+          id: newOrder.id,
+          cliente_nome: newOrder.cliente_nome,
+          quiosque: newOrder.quiosque,
+          status: newOrder.status,
+          valor_total: newOrder.valor_total,
+          taxa_servico: newOrder.taxa_servico,
+          valor_final: newOrder.valor_final,
+          observacoes: newOrder.observacoes,
+          created_at: newOrder.created_at
+        });
+        if (ordErr) throw ordErr;
+
+        const itemsToInsert = activeItens.map((it) => ({
+          pedido_id: newOrder.id,
+          produto_id: it.produto_id,
+          produto_nome: it.produto_nome,
+          quantidade: it.quantidade,
+          valor: it.valor
+        }));
+
+        const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
+        if (itemsErr) throw itemsErr;
+
+        // Decrement stock in Supabase
+        for (const item of activeItens) {
+          const prod = products.find((p) => p.id === item.produto_id);
+          if (prod && prod.estoque !== undefined && prod.estoque !== null) {
+            const newEstoque = Math.max(0, prod.estoque - item.quantidade);
+            await realSupabase.from('produtos').update({ estoque: newEstoque }).eq('id', prod.id);
+          }
+        }
+
+        savedOnline = true;
+      } catch (err) {
+        console.error('Failed to save waiter order to Supabase:', err);
+      }
+    }
+
+    if (!savedOnline) {
+      try {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOrder)
+        });
+        if (!res.ok) throw new Error('Failed to save waiter order to local server');
+      } catch (err) {
+        console.error('Waiter local order post failed:', err);
+      }
+    }
+
+    // Auto-register client if not exists
+    const clientExists = clientes.some(
+      (c) =>
+        c.nome.toLowerCase() === waiterOrderForm.cliente_nome.toLowerCase() &&
+        c.quiosque.toLowerCase() === waiterOrderForm.quiosque.toLowerCase()
+    );
+    if (!clientExists) {
+      const newClientData = {
+        nome: waiterOrderForm.cliente_nome.trim(),
+        quiosque: waiterOrderForm.quiosque.trim(),
+        celular: '',
+        telefone: '',
+        created_at: new Date().toISOString()
+      };
+      if (realSupabase && hasSupabaseConfig) {
+        try {
+          await realSupabase.from('clientes').insert(newClientData);
+        } catch (err) {
+          console.error('Error saving client to Supabase:', err);
+        }
+      } else {
+        try {
+          await fetch('/api/clients', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newClientData)
+          });
+        } catch (err) {
+          console.error('Error saving client to local API:', err);
+        }
+      }
+    }
+
+    // Reset Form & Close Modal
+    setWaiterOrderForm({
+      cliente_nome: '',
+      quiosque: '',
+      observacoes: '',
+      itens: {}
+    });
+    setIsAddingOrder(false);
+  };
+
   const [prodPeriod, setProdPeriod] = useState<'today' | '7days' | '30days' | 'all'>('all');
   const [revenuePeriod, setRevenuePeriod] = useState<'daily' | 'monthly' | 'annual'>('daily');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -260,7 +471,8 @@ export function AdminPanel({
     preco: '',
     categoria: '',
     imagem: '',
-    ativo: true
+    ativo: true,
+    estoque: ''
   });
 
   const [imageMode, setImageMode] = useState<'upload' | 'url'>('upload');
@@ -324,6 +536,59 @@ export function AdminPanel({
   // Settings State
   const [settingsForm, setSettingsForm] = useState({ ...config });
 
+  // Clients CRUD State
+  const [isAddingClient, setIsAddingClient] = useState(false);
+  const [editingClient, setEditingClient] = useState<Cliente | null>(null);
+  const [clientForm, setClientForm] = useState({
+    nome: '',
+    quiosque: '',
+    celular: '',
+    telefone: ''
+  });
+
+  const handleEditClientClick = (cli: Cliente) => {
+    setEditingClient(cli);
+    setClientForm({
+      nome: cli.nome,
+      quiosque: cli.quiosque,
+      celular: cli.celular || '',
+      telefone: cli.telefone || cli.celular || ''
+    });
+    setIsAddingClient(false);
+  };
+
+  const handleAddClientClick = () => {
+    setIsAddingClient(true);
+    setEditingClient(null);
+    setClientForm({
+      nome: '',
+      quiosque: '',
+      celular: '',
+      telefone: ''
+    });
+  };
+
+  const handleSaveClient = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!clientForm.nome.trim() || !clientForm.quiosque.trim()) return;
+
+    const payload = {
+      nome: clientForm.nome.trim(),
+      quiosque: clientForm.quiosque.trim(),
+      celular: clientForm.celular.trim() || clientForm.telefone.trim(),
+      telefone: clientForm.telefone.trim() || clientForm.celular.trim()
+    };
+
+    if (editingClient) {
+      if (onUpdateClient) onUpdateClient(editingClient.id, payload);
+    } else {
+      if (onAddClient) onAddClient(payload);
+    }
+
+    setIsAddingClient(false);
+    setEditingClient(null);
+  };
+
   // SQL Copy feedback
   const [sqlCopied, setSqlCopied] = useState(false);
 
@@ -336,7 +601,8 @@ export function AdminPanel({
       preco: prod.preco.toString(),
       categoria: prod.categoria,
       imagem: prod.imagem,
-      ativo: prod.ativo
+      ativo: prod.ativo,
+      estoque: prod.estoque !== undefined && prod.estoque !== null ? prod.estoque.toString() : ''
     });
     setUploadError(null);
     setImageMode(prod.imagem.startsWith('data:') ? 'upload' : 'url');
@@ -352,7 +618,8 @@ export function AdminPanel({
       preco: '',
       categoria: categorias[0]?.nome || 'Bebidas',
       imagem: '',
-      ativo: true
+      ativo: true,
+      estoque: ''
     });
     setUploadError(null);
     setImageMode('upload');
@@ -363,13 +630,21 @@ export function AdminPanel({
     const priceNum = parseFloat(prodForm.preco);
     if (!prodForm.nome.trim() || isNaN(priceNum)) return;
 
+    const isFoodOrSnack = ['comida', 'petisco', 'prato', 'refeição', 'refeicoes', 'porção', 'porções', 'sobremesa'].some(
+      word => prodForm.categoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(word)
+    );
+
+    const estoqueVal = prodForm.estoque.trim();
+    const estoqueNum = estoqueVal !== '' ? parseInt(estoqueVal, 10) : null;
+
     const payload = {
       nome: prodForm.nome.trim(),
       descricao: prodForm.descricao.trim(),
       preco: priceNum,
       categoria: prodForm.categoria,
       imagem: prodForm.imagem.trim() || 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600&auto=format&fit=crop&q=80',
-      ativo: prodForm.ativo
+      ativo: prodForm.ativo,
+      estoque: isFoodOrSnack ? null : (estoqueNum !== null && !isNaN(estoqueNum) ? estoqueNum : null)
     };
 
     if (editingProduct) {
@@ -428,6 +703,88 @@ export function AdminPanel({
     }
   };
 
+  const selectedItemsWithQty = useMemo(() => {
+    return Object.entries(waiterOrderForm.itens)
+      .map(([prodId, qty]) => {
+        const prod = products.find(p => p.id === prodId);
+        return {
+          prod,
+          prodId,
+          quantidade: qty as number
+        };
+      })
+      .filter(item => item.prod && item.quantidade > 0);
+  }, [waiterOrderForm.itens, products]);
+
+  if (adminUser === null) {
+    return (
+      <div className="min-h-screen bg-[#FCFBF9] text-[#1B3322] flex items-center justify-center p-6 font-sans">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="max-w-md w-full bg-white border border-[#E3DCD2] rounded-[32px] p-8 space-y-6 shadow-xl"
+        >
+          {/* Logo & Header */}
+          <div className="text-center space-y-2">
+            <div className="text-5xl animate-bounce duration-1000">🌴</div>
+            <h1 className="text-2xl font-serif italic font-bold text-[#1E5E3A]">{config.nome || 'Ubá Papuá'}</h1>
+            <p className="text-xs font-semibold text-[#9C8E7B] uppercase tracking-wider">Acesso Restrito</p>
+            <p className="text-xs text-[#706558]">Garçons e Administradores</p>
+          </div>
+
+          {/* Form */}
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-[10px] font-extrabold text-[#706558] uppercase tracking-wider block">Login / Usuário</label>
+              <input
+                type="text"
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                placeholder="Ex: admin ou garcom"
+                required
+                className="w-full px-4 py-3 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] placeholder-[#A89F91] focus:ring-2 focus:ring-[#1E5E3A]/20 focus:border-[#1E5E3A] outline-none transition-all"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-extrabold text-[#706558] uppercase tracking-wider block">Senha de Acesso</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="Digite sua senha"
+                required
+                className="w-full px-4 py-3 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] placeholder-[#A89F91] focus:ring-2 focus:ring-[#1E5E3A]/20 focus:border-[#1E5E3A] outline-none transition-all"
+              />
+            </div>
+
+            {loginError && (
+              <p className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-100 rounded-lg p-2.5 text-center">
+                ⚠️ {loginError}
+              </p>
+            )}
+
+            <button
+              type="submit"
+              className="w-full py-3 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-green-100/50 uppercase tracking-wider flex items-center justify-center gap-2"
+            >
+              <span>Autenticar</span>
+            </button>
+          </form>
+
+          {/* Back button */}
+          <button
+            onClick={onClose}
+            className="w-full py-2.5 bg-white border border-[#E3DCD2] hover:bg-[#FCFBF9] text-[#706558] hover:text-[#1B3322] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            <span>Voltar ao Cardápio</span>
+          </button>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <div id="admin-panel-container" className="min-h-screen bg-[#FCFBF9] text-[#1B3322] flex flex-col md:flex-row pb-12">
       {/* Navigation Sidebar */}
@@ -441,12 +798,21 @@ export function AdminPanel({
                 <p className="text-[10px] text-[#9C8E7B]">Gestão do Estabelecimento</p>
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="md:hidden p-2 rounded-xl bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322]"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleAdminLogout}
+                className="py-1 px-2.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-extrabold text-[10px] rounded-lg transition-all"
+                title="Sair do Painel"
+              >
+                Sair
+              </button>
+              <button
+                onClick={onClose}
+                className="md:hidden p-2 rounded-xl bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322]"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           <nav className="space-y-1.5">
@@ -467,41 +833,45 @@ export function AdminPanel({
               )}
             </button>
 
-            <button
-              onClick={() => setActiveTab('products')}
-              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
-                activeTab === 'products'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
-              }`}
-            >
-              <Coffee className="h-4 w-4" />
-              <span>Menu de Produtos</span>
-            </button>
+            {adminUser === 'admin' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('products')}
+                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                    activeTab === 'products'
+                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  }`}
+                >
+                  <Coffee className="h-4 w-4" />
+                  <span>Menu de Produtos</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('categories')}
-              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
-                activeTab === 'categories'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
-              }`}
-            >
-              <ChevronDown className="h-4 w-4" />
-              <span>Categorias</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('categories')}
+                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                    activeTab === 'categories'
+                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  }`}
+                >
+                  <ChevronDown className="h-4 w-4" />
+                  <span>Categorias</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('reports')}
-              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
-                activeTab === 'reports'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
-              }`}
-            >
-              <BarChart3 className="h-4 w-4" />
-              <span>Relatórios e Métricas</span>
-            </button>
+                <button
+                  onClick={() => setActiveTab('reports')}
+                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                    activeTab === 'reports'
+                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  }`}
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  <span>Relatórios e Métricas</span>
+                </button>
+              </>
+            )}
 
             <button
               onClick={() => setActiveTab('clientes')}
@@ -520,45 +890,55 @@ export function AdminPanel({
               )}
             </button>
 
-            <button
-              onClick={() => setActiveTab('settings')}
-              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
-              }`}
-            >
-              <Settings className="h-4 w-4" />
-              <span>Configurações</span>
-            </button>
+            {adminUser === 'admin' && (
+              <>
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                    activeTab === 'settings'
+                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  }`}
+                >
+                  <Settings className="h-4 w-4" />
+                  <span>Configurações</span>
+                </button>
 
-            <button
-              onClick={() => setActiveTab('supabase')}
-              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
-                activeTab === 'supabase'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
-              }`}
-            >
-              <Database className="h-4 w-4" />
-              <span>Supabase Cloud Integration</span>
-              <span
-                className={`ml-auto w-2 h-2 rounded-full ${
-                  supabaseStatus === 'connected'
-                    ? 'bg-emerald-500'
-                    : supabaseStatus === 'disconnected'
-                    ? 'bg-red-500'
-                    : 'bg-amber-500'
-                }`}
-              />
-            </button>
+                <button
+                  onClick={() => setActiveTab('supabase')}
+                  className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                    activeTab === 'supabase'
+                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  }`}
+                >
+                  <Database className="h-4 w-4" />
+                  <span>Supabase Cloud Integration</span>
+                  <span
+                    className={`ml-auto w-2 h-2 rounded-full ${
+                      supabaseStatus === 'connected'
+                        ? 'bg-emerald-500'
+                        : supabaseStatus === 'disconnected'
+                        ? 'bg-red-500'
+                        : 'bg-amber-500'
+                    }`}
+                  />
+                </button>
+              </>
+            )}
           </nav>
         </div>
 
-        <div className="p-6 border-t border-[#E3DCD2] hidden md:block">
+        <div className="p-6 border-t border-[#E3DCD2] space-y-2 hidden md:block">
+          <button
+            onClick={handleAdminLogout}
+            className="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2"
+          >
+            <span>Sair do Painel</span>
+          </button>
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-white border border-[#E3DCD2] hover:bg-[#FCFBF9] text-[#1B3322] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
+            className="w-full py-2 bg-white border border-[#E3DCD2] hover:bg-[#FCFBF9] text-[#1B3322] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Voltar ao Cardápio</span>
@@ -615,11 +995,27 @@ export function AdminPanel({
         <div className="space-y-6">
           {activeTab === 'orders' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E3DCD2] pb-3 gap-3">
                 <div>
                   <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Painel de Pedidos em Tempo Real</h2>
                   <p className="text-xs text-[#706558]">Ordene e atualize o status dos pedidos instantaneamente</p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setWaiterOrderForm({
+                      cliente_nome: '',
+                      quiosque: '',
+                      observacoes: '',
+                      itens: {}
+                    });
+                    setIsAddingOrder(true);
+                  }}
+                  className="bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2 shrink-0 self-start sm:self-center"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Lançar Venda (Garçom)</span>
+                </button>
               </div>
 
               {orders.length === 0 ? (
@@ -1053,6 +1449,27 @@ export function AdminPanel({
                       />
                     </div>
 
+                    {/* Conditional stock field if not food/snack */}
+                    {['comida', 'petisco', 'prato', 'refeição', 'refeicoes', 'porção', 'porções', 'sobremesa'].some(
+                      word => prodForm.categoria.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(word)
+                    ) ? (
+                      <div className="md:col-span-2 bg-[#F4EFE6]/50 border border-[#E3DCD2] px-3.5 py-2.5 rounded-xl text-[10px] font-bold text-[#706558] italic">
+                        🍳 Comidas, pratos e petiscos não possuem controle de estoque (estoque ilimitado).
+                      </div>
+                    ) : (
+                      <div className="space-y-1.5 md:col-span-2">
+                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Quantidade em Estoque</label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={prodForm.estoque}
+                          onChange={(e) => setProdForm({ ...prodForm, estoque: e.target.value })}
+                          placeholder="Ex: 50 (Deixe em branco para sem limite)"
+                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
+                        />
+                      </div>
+                    )}
+
                     <div className="flex items-center gap-2 py-2 md:col-span-2">
                       <input
                         type="checkbox"
@@ -1101,7 +1518,22 @@ export function AdminPanel({
                       </div>
                       <div className="min-w-0">
                         <h4 className="text-sm font-bold text-[#1B3322] truncate">{prod.nome}</h4>
-                        <p className="text-[10px] text-[#706558] font-semibold">{prod.categoria} • R$ {prod.preco.toFixed(2)}</p>
+                        <p className="text-[10px] text-[#706558] font-semibold flex flex-wrap items-center gap-1.5">
+                          <span>{prod.categoria} • R$ {prod.preco.toFixed(2)}</span>
+                          {prod.estoque !== undefined && prod.estoque !== null ? (
+                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
+                              prod.estoque <= 0 
+                                ? 'bg-red-50 text-red-700 border border-red-100' 
+                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                            }`}>
+                              Estoque: {prod.estoque} un
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                              Sem Limite (Prato/Petisco)
+                            </span>
+                          )}
+                        </p>
                         <span
                           className={`inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded ${
                             prod.ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
@@ -1558,6 +1990,195 @@ export function AdminPanel({
             </div>
           )}
 
+          {activeTab === 'clientes' && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+                <div>
+                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Gerenciar Clientes Cadastrados</h2>
+                  <p className="text-xs text-[#706558]">Visualize, edite perfis ou cadastre novos clientes</p>
+                </div>
+                <button
+                  onClick={handleAddClientClick}
+                  className="bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-green-100"
+                >
+                  <UserPlus className="h-4 w-4" />
+                  <span>Cadastrar Novo Cliente</span>
+                </button>
+              </div>
+
+              {/* Add/Edit Client Form */}
+              {(isAddingClient || editingClient) && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-white border border-[#E3DCD2] p-6 rounded-2xl shadow-sm"
+                >
+                  <div className="mb-4">
+                    <h3 className="text-sm font-bold text-[#1B3322]">
+                      {editingClient ? 'Editar Perfil do Cliente' : 'Cadastrar Novo Cliente'}
+                    </h3>
+                    <p className="text-[10px] text-[#706558]">Insira as informações de cadastro do cliente</p>
+                  </div>
+
+                  <form onSubmit={handleSaveClient} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Nome Completo</label>
+                        <input
+                          type="text"
+                          required
+                          value={clientForm.nome}
+                          onChange={(e) => setClientForm({ ...clientForm, nome: e.target.value })}
+                          placeholder="Ex: Mariana Silva"
+                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Quiosque / Mesa</label>
+                        <input
+                          type="text"
+                          required
+                          value={clientForm.quiosque}
+                          onChange={(e) => setClientForm({ ...clientForm, quiosque: e.target.value })}
+                          placeholder="Ex: Mesa 05 ou Espreguiçadeira 12"
+                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Celular / WhatsApp</label>
+                        <input
+                          type="text"
+                          required
+                          value={clientForm.celular}
+                          onChange={(e) => setClientForm({ ...clientForm, celular: e.target.value, telefone: e.target.value })}
+                          placeholder="Ex: (91) 98888-7777"
+                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        />
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Telefone de Contato (Opcional)</label>
+                        <input
+                          type="text"
+                          value={clientForm.telefone}
+                          onChange={(e) => setClientForm({ ...clientForm, telefone: e.target.value })}
+                          placeholder="Ex: (91) 3222-1111"
+                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 border-t border-[#E3DCD2] pt-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsAddingClient(false);
+                          setEditingClient(null);
+                        }}
+                        className="px-4 py-2 bg-[#F4EFE6] border border-[#E3DCD2] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="px-5 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-green-100"
+                      >
+                        {editingClient ? 'Salvar Alterações' : 'Cadastrar'}
+                      </button>
+                    </div>
+                  </form>
+                </motion.div>
+              )}
+
+              {/* Clients Table List */}
+              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+                {clientes.length === 0 ? (
+                  <div className="py-12 text-center space-y-2">
+                    <User className="h-10 w-10 text-[#9C8E7B] mx-auto opacity-40" />
+                    <p className="text-xs font-bold text-[#9C8E7B]">Nenhum cliente cadastrado ainda.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E3DCD2]">
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Nome do Cliente</th>
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Mesa / Local</th>
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Celular / Telefone</th>
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Cadastro</th>
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-right">Ações</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {clientes.map((cli) => {
+                          const rawPhone = (cli.telefone || cli.celular || '').replace(/\D/g, '');
+                          const whatsappUrl = rawPhone ? `https://wa.me/55${rawPhone}` : null;
+                          return (
+                            <tr key={cli.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
+                              <td className="py-3.5 text-xs font-bold text-[#1B3322]">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-8 h-8 rounded-full bg-[#1E5E3A]/10 flex items-center justify-center text-[#1E5E3A] font-extrabold text-xs">
+                                    {cli.nome.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="font-bold text-xs text-[#1B3322]">{cli.nome}</p>
+                                    <p className="text-[9px] text-[#9C8E7B] font-mono">ID: {cli.id.slice(-6).toUpperCase()}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-3.5 text-xs text-center">
+                                <span className="bg-[#F4EFE6] border border-[#E3DCD2] text-[#1E5E3A] font-extrabold px-2.5 py-0.5 rounded-lg text-[10px]">
+                                  {cli.quiosque}
+                                </span>
+                              </td>
+                              <td className="py-3.5 text-xs text-center font-semibold text-[#1B3322] font-mono">
+                                {cli.telefone || cli.celular || '-'}
+                              </td>
+                              <td className="py-3.5 text-[10px] text-center text-[#706558] font-semibold">
+                                {cli.created_at ? new Date(cli.created_at).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                              </td>
+                              <td className="py-3.5 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {whatsappUrl && (
+                                    <a
+                                      href={whatsappUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="p-1.5 bg-[#25D366]/10 hover:bg-[#25D366]/20 border border-[#25D366]/30 text-[#128C7E] rounded-lg transition-all"
+                                      title="WhatsApp"
+                                    >
+                                      <Phone className="h-3.5 w-3.5" />
+                                    </a>
+                                  )}
+                                  <button
+                                    onClick={() => handleEditClientClick(cli)}
+                                    className="p-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] border border-[#E3DCD2] text-[#706558] rounded-lg cursor-pointer transition-all"
+                                    title="Editar Dados"
+                                  >
+                                    <Edit2 className="h-3.5 w-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => onDeleteClient && onDeleteClient(cli.id)}
+                                    className="p-1.5 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-lg cursor-pointer transition-all"
+                                    title="Excluir"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'settings' && (
             <div className="space-y-6">
               <div className="border-b border-[#E3DCD2] pb-3">
@@ -1796,6 +2417,233 @@ export function AdminPanel({
           )}
         </div>
       </main>
+
+      {/* Waiter Order Creator Modal */}
+      <AnimatePresence>
+        {isAddingOrder && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#FCFBF9] w-full max-w-4xl rounded-[32px] border border-[#E3DCD2] shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-[#E3DCD2] flex justify-between items-center bg-[#F4EFE6] rounded-t-[32px]">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🌴</span>
+                  <div>
+                    <h3 className="text-base font-serif italic font-bold text-[#1B3322]">Lançar Nova Venda (Garçom)</h3>
+                    <p className="text-[10px] text-[#706558]">Registre um pedido diretamente na mesa do cliente</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAddingOrder(false)}
+                  className="p-1.5 rounded-xl hover:bg-[#E3DCD2] text-[#706558] cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <form onSubmit={handleSaveWaiterOrder} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Column Left (ColSpan 7) */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Client Info inputs */}
+                  <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-2xl border border-[#E3DCD2]">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase block">Nome do Cliente</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nome do cliente"
+                        value={waiterOrderForm.cliente_nome}
+                        onChange={(e) => setWaiterOrderForm(prev => ({ ...prev, cliente_nome: e.target.value }))}
+                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] focus:ring-1 focus:ring-[#1E5E3A] outline-none"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase block">Mesa / Quiosque</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ex: Quiosque 04"
+                        value={waiterOrderForm.quiosque}
+                        onChange={(e) => setWaiterOrderForm(prev => ({ ...prev, quiosque: e.target.value }))}
+                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] focus:ring-1 focus:ring-[#1E5E3A] outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Filter Categories */}
+                  <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setOrderCategoryFilter('all')}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
+                        orderCategoryFilter === 'all'
+                          ? 'bg-[#1E5E3A] text-white border-[#1E5E3A]'
+                          : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                      }`}
+                    >
+                      Todos
+                    </button>
+                    {categorias.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setOrderCategoryFilter(cat.nome)}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
+                          orderCategoryFilter === cat.nome
+                            ? 'bg-[#1E5E3A] text-white border-[#1E5E3A]'
+                            : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                        }`}
+                      >
+                        {cat.nome}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Products Grid selector */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[35vh] overflow-y-auto pr-1">
+                    {products
+                      .filter(p => p.ativo)
+                      .filter(p => orderCategoryFilter === 'all' || p.categoria === orderCategoryFilter)
+                      .map(prod => {
+                        const count = waiterOrderForm.itens[prod.id] || 0;
+                        const isOutOfStock = prod.estoque !== null && prod.estoque !== undefined && prod.estoque <= 0;
+
+                        return (
+                          <div
+                            key={prod.id}
+                            className={`p-3 bg-white rounded-xl border flex gap-3 items-center justify-between transition-all ${
+                              count > 0 ? 'border-[#1E5E3A] bg-green-50/10 ring-1 ring-[#1E5E3A]/10' : 'border-[#E3DCD2]'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-[#1B3322] truncate">{prod.nome}</h4>
+                              <p className="text-[10px] font-extrabold text-[#1E5E3A] mt-0.5">R$ {prod.preco.toFixed(2)}</p>
+                              {prod.estoque !== null && prod.estoque !== undefined && (
+                                <p className={`text-[9px] font-semibold ${isOutOfStock ? 'text-red-600 animate-pulse' : 'text-[#9C8E7B]'} mt-0.5`}>
+                                  {isOutOfStock ? 'Sem Estoque (Não disponível)' : `Estoque: ${prod.estoque} un`}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Qty controls */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                disabled={count === 0}
+                                onClick={() => {
+                                  setWaiterOrderForm(prev => {
+                                    const nextItens = { ...prev.itens };
+                                    if (nextItens[prod.id] > 1) {
+                                      nextItens[prod.id]--;
+                                    } else {
+                                      delete nextItens[prod.id];
+                                    }
+                                    return { ...prev, itens: nextItens };
+                                  });
+                                }}
+                                className="w-6 h-6 rounded-lg border border-[#E3DCD2] hover:bg-[#F4EFE6] disabled:opacity-30 text-[#706558] font-bold text-xs flex items-center justify-center cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="text-xs font-black w-4 text-center text-[#1B3322]">{count}</span>
+                              <button
+                                type="button"
+                                disabled={isOutOfStock || (prod.estoque !== null && prod.estoque !== undefined && count >= prod.estoque)}
+                                onClick={() => {
+                                  setWaiterOrderForm(prev => {
+                                    const nextItens = { ...prev.itens };
+                                    nextItens[prod.id] = (nextItens[prod.id] || 0) + 1;
+                                    return { ...prev, itens: nextItens };
+                                  });
+                                }}
+                                className="w-6 h-6 rounded-lg bg-[#1E5E3A] hover:bg-opacity-90 disabled:bg-gray-200 text-white font-bold text-xs flex items-center justify-center cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Column Right (ColSpan 5) */}
+                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#E3DCD2] flex flex-col justify-between space-y-4">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider border-b border-[#E3DCD2] pb-2">Resumo do Pedido</h3>
+
+                    {/* Selected items list */}
+                    <div className="space-y-2 max-h-[25vh] overflow-y-auto pr-1">
+                      {selectedItemsWithQty.length === 0 ? (
+                        <p className="text-[11px] text-[#706558] italic text-center py-6">Nenhum item selecionado</p>
+                      ) : (
+                        selectedItemsWithQty.map(({ prod, prodId, quantidade }) => (
+                          <div key={prodId} className="flex justify-between items-center text-xs text-[#1B3322]">
+                            <span>
+                              <strong className="text-[#1E5E3A]">{quantidade}x</strong> {prod?.nome}
+                            </span>
+                            <span className="font-semibold text-[#706558]">R$ {((prod?.preco || 0) * quantidade).toFixed(2)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Observações */}
+                    <div className="space-y-1 pt-2 border-t border-[#E3DCD2]">
+                      <label className="text-[9px] font-extrabold text-[#706558] uppercase block">Observações do Pedido</label>
+                      <textarea
+                        placeholder="Ex: sem gelo e limão, ponto da carne..."
+                        value={waiterOrderForm.observacoes}
+                        onChange={(e) => setWaiterOrderForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs text-[#1B3322] h-16 resize-none outline-none focus:ring-1 focus:ring-[#1E5E3A]"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Calculations & Submit */}
+                  <div className="space-y-3 pt-3 border-t border-[#E3DCD2]">
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between text-[#706558]">
+                        <span>Subtotal</span>
+                        <span>R$ {selectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-[#706558]">
+                        <span>Taxa de Serviço ({config.taxa_servico}%)</span>
+                        <span>R$ {(selectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0) * config.taxa_servico / 100).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm font-black text-[#1E5E3A] border-t border-[#E3DCD2]/50 pt-2">
+                        <span>Total Geral</span>
+                        <span>R$ {(selectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0) * (1 + config.taxa_servico / 100)).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingOrder(false)}
+                        className="flex-1 py-2.5 bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322] font-bold text-xs rounded-xl cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-2.5 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md shadow-green-100"
+                      >
+                        Confirmar Pedido
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

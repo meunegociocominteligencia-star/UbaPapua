@@ -454,8 +454,8 @@ let pedidos: any[] = [
 
 // Registered Clients in-memory state
 let clientes: any[] = [
-  { id: 'c-demo-1', nome: 'Mariana Silva', quiosque: 'Mesa 05', celular: '(91) 98888-7777', created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
-  { id: 'c-demo-2', nome: 'Carlos Eduardo', quiosque: 'Espreguiçadeira 12', celular: '(91) 97777-6666', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() }
+  { id: 'c-demo-1', nome: 'Mariana Silva', quiosque: 'Mesa 05', celular: '(91) 98888-7777', telefone: '(91) 98888-7777', created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+  { id: 'c-demo-2', nome: 'Carlos Eduardo', quiosque: 'Espreguiçadeira 12', celular: '(91) 97777-6666', telefone: '(91) 97777-6666', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() }
 ];
 
 // Active Server-Sent Events (SSE) connections for real-time updates
@@ -606,7 +606,18 @@ async function startServer() {
       status: req.body.status || 'Recebido'
     };
     pedidos.unshift(newOrder); // Add to the beginning so latest appears first
-    broadcastSSE({ type: 'order_created', order: newOrder });
+
+    // Decrement stock for ordered products if applicable
+    if (Array.isArray(newOrder.itens)) {
+      newOrder.itens.forEach((item: any) => {
+        const prod = produtos.find((p) => p.id === item.produto_id) as any;
+        if (prod && prod.estoque !== undefined && prod.estoque !== null) {
+          prod.estoque = Math.max(0, prod.estoque - item.quantidade);
+        }
+      });
+    }
+
+    broadcastSSE({ type: 'order_created', order: newOrder, products: produtos });
     res.status(201).json(newOrder);
   });
 
@@ -632,7 +643,8 @@ async function startServer() {
     const newClient = {
       ...req.body,
       id: req.body.id || 'c_' + Math.random().toString(36).substr(2, 9),
-      created_at: req.body.created_at || new Date().toISOString()
+      created_at: req.body.created_at || new Date().toISOString(),
+      telefone: req.body.telefone || req.body.celular
     };
     
     // Check if duplicate
@@ -642,6 +654,29 @@ async function startServer() {
       broadcastSSE({ type: 'client_created', client: newClient });
     }
     res.status(201).json(newClient);
+  });
+
+  app.put('/api/clients/:id', (req, res) => {
+    const { id } = req.params;
+    const index = clientes.findIndex((c) => c.id === id);
+    if (index !== -1) {
+      clientes[index] = { 
+        ...clientes[index], 
+        ...req.body,
+        telefone: req.body.telefone || req.body.celular || clientes[index].telefone
+      };
+      broadcastSSE({ type: 'client_updated', client: clientes[index] });
+      res.json(clientes[index]);
+    } else {
+      res.status(404).json({ error: 'Cliente não encontrado' });
+    }
+  });
+
+  app.delete('/api/clients/:id', (req, res) => {
+    const { id } = req.params;
+    clientes = clientes.filter((c) => c.id !== id);
+    broadcastSSE({ type: 'client_deleted', id });
+    res.json({ success: true });
   });
 
   app.post('/api/clients/close-bill', (req, res) => {
