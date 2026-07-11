@@ -4,20 +4,39 @@
  */
 
 import React, { useState } from 'react';
-import { Sunset, ArrowRight, User, MapPin } from 'lucide-react';
+import { Sunset, ArrowRight, User, MapPin, Phone } from 'lucide-react';
 import { motion } from 'motion/react';
 import { ConfigEstabelecimento } from '../types';
 
 interface ClientIdentificationProps {
   config: ConfigEstabelecimento;
-  onIdentify: (nome: string, quiosque: string) => void;
+  onIdentify: (nome: string, quiosque: string, celular: string) => void;
   onEnterAdmin: () => void;
 }
 
 export function ClientIdentification({ config, onIdentify, onEnterAdmin }: ClientIdentificationProps) {
   const [nome, setNome] = useState('');
   const [quiosque, setQuiosque] = useState('');
+  const [celular, setCelular] = useState('');
   const [error, setError] = useState('');
+
+  const handleCelularChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    const digits = input.replace(/\D/g, '');
+    let masked = '';
+    
+    if (digits.length > 0) {
+      masked += `(${digits.substring(0, 2)}`;
+    }
+    if (digits.length > 2) {
+      masked += `) ${digits.substring(2, 7)}`;
+    }
+    if (digits.length > 7) {
+      masked += `-${digits.substring(7, 11)}`;
+    }
+    
+    setCelular(masked);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,8 +48,13 @@ export function ClientIdentification({ config, onIdentify, onEnterAdmin }: Clien
       setError('Por favor, informe seu Quiosque, Mesa ou Guarda-sol.');
       return;
     }
+    const rawCelular = celular.replace(/\D/g, '');
+    if (!rawCelular || rawCelular.length < 10) {
+      setError('Por favor, informe seu celular com DDD (Ex: 91 99999-9999).');
+      return;
+    }
     setError('');
-    onIdentify(nome.trim(), quiosque.trim());
+    onIdentify(nome.trim(), quiosque.trim(), celular.trim());
   };
 
   return (
@@ -107,6 +131,25 @@ export function ClientIdentification({ config, onIdentify, onEnterAdmin }: Clien
             <p className="text-[11px] text-[#706558] pl-1 leading-normal">
               * Nosso garçom entregará seus pedidos diretamente nesta localização.
             </p>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-[#1B3322] uppercase tracking-wider block">
+              Seu Celular / WhatsApp
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-[#706558] pointer-events-none">
+                <Phone className="h-5 w-5 text-[#1E5E3A]" />
+              </span>
+              <input
+                id="customer-celular-input"
+                type="tel"
+                value={celular}
+                onChange={handleCelularChange}
+                placeholder="Ex: (91) 99999-9999"
+                className="w-full pl-11 pr-4 py-3.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-2xl text-[#1B3322] placeholder-[#9C8E7B] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] transition-all font-medium text-base shadow-inner-sm"
+              />
+            </div>
           </div>
 
           {error && (

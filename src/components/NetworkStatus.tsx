@@ -17,51 +17,51 @@ export function NetworkStatus({ status, pendingCount }: NetworkStatusProps) {
     <AnimatePresence>
       <motion.div
         id="network-status-indicator"
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: 20 }}
-        className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 rounded-full px-4 py-2 text-sm font-medium shadow-xl backdrop-blur-md"
+        exit={{ opacity: 0, y: -20 }}
+        className="fixed top-3 right-3 z-50 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold shadow-md backdrop-blur-md transition-all"
         style={{
           background:
             status === 'online'
-              ? 'rgba(16, 185, 129, 0.15)'
+              ? 'rgba(16, 185, 129, 0.12)'
               : status === 'syncing'
-              ? 'rgba(14, 165, 233, 0.15)'
-              : 'rgba(249, 115, 22, 0.15)',
+              ? 'rgba(14, 165, 233, 0.12)'
+              : 'rgba(249, 115, 22, 0.12)',
           border:
             status === 'online'
-              ? '1px solid rgba(16, 185, 129, 0.3)'
+              ? '1px solid rgba(16, 185, 129, 0.25)'
               : status === 'syncing'
-              ? '1px solid rgba(14, 165, 233, 0.3)'
-              : '1px solid rgba(249, 115, 22, 0.3)',
+              ? '1px solid rgba(14, 165, 233, 0.25)'
+              : '1px solid rgba(249, 115, 22, 0.25)',
           color:
             status === 'online'
               ? '#10B981'
               : status === 'syncing'
-              ? '#38BDF8'
-              : '#F97316',
+              ? '#0284C7'
+              : '#EA580C',
         }}
       >
         {status === 'online' && (
           <>
-            <Wifi className="h-4 w-4 animate-pulse" />
+            <Wifi className="h-3 w-3 animate-pulse" />
             <span>Online</span>
           </>
         )}
         {status === 'syncing' && (
           <>
-            <RefreshCw className="h-4 w-4 animate-spin" />
-            <span>Sincronizando...</span>
+            <RefreshCw className="h-3 w-3 animate-spin" />
+            <span>Sincronizando</span>
           </>
         )}
         {status === 'offline' && (
           <>
-            <WifiOff className="h-4 w-4 animate-bounce" />
-            <span>Modo Offline</span>
+            <WifiOff className="h-3 w-3 animate-bounce" />
+            <span>Offline</span>
           </>
         )}
         {pendingCount > 0 && (
-          <span className="ml-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-orange-500 px-1.5 text-xs font-bold text-white shadow-md animate-pulse">
+          <span className="ml-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-orange-600 px-1 text-[9px] font-black text-white shadow-sm animate-pulse">
             {pendingCount}
           </span>
         )}

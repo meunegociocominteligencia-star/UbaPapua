@@ -452,6 +452,12 @@ let pedidos: any[] = [
   }
 ];
 
+// Registered Clients in-memory state
+let clientes: any[] = [
+  { id: 'c-demo-1', nome: 'Mariana Silva', quiosque: 'Mesa 05', celular: '(91) 98888-7777', created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+  { id: 'c-demo-2', nome: 'Carlos Eduardo', quiosque: 'Espreguiçadeira 12', celular: '(91) 97777-6666', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() }
+];
+
 // Active Server-Sent Events (SSE) connections for real-time updates
 let clients: any[] = [];
 
@@ -478,8 +484,8 @@ async function startServer() {
     const newClient = { id: clientId, res };
     clients.push(newClient);
 
-    // Send initial list of orders and products on connect
-    res.write(`data: ${JSON.stringify({ type: 'init', pedidos, produtos, categorias, config })}\n\n`);
+    // Send initial list of orders, products, and registered clients on connect
+    res.write(`data: ${JSON.stringify({ type: 'init', pedidos, produtos, categorias, config, clientes })}\n\n`);
 
     req.on('close', () => {
       clients = clients.filter((client) => client.id !== clientId);
@@ -615,6 +621,53 @@ async function startServer() {
     } else {
       res.status(404).json({ error: 'Pedido não encontrado' });
     }
+  });
+
+  // API: Clients Endpoints
+  app.get('/api/clients', (req, res) => {
+    res.json(clientes);
+  });
+
+  app.post('/api/clients', (req, res) => {
+    const newClient = {
+      ...req.body,
+      id: req.body.id || 'c_' + Math.random().toString(36).substr(2, 9),
+      created_at: req.body.created_at || new Date().toISOString()
+    };
+    
+    // Check if duplicate
+    const exists = clientes.some(c => c.nome.toLowerCase() === newClient.nome.toLowerCase() && c.quiosque.toLowerCase() === newClient.quiosque.toLowerCase());
+    if (!exists) {
+      clientes.unshift(newClient);
+      broadcastSSE({ type: 'client_created', client: newClient });
+    }
+    res.status(201).json(newClient);
+  });
+
+  app.post('/api/clients/close-bill', (req, res) => {
+    const { quiosque, cliente_nome } = req.body;
+    let count = 0;
+    pedidos.forEach(p => {
+      if (p.quiosque.toLowerCase() === quiosque.toLowerCase() && p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase() && p.status !== 'Cancelado') {
+        p.conta_solicitada = true;
+        count++;
+      }
+    });
+    
+    broadcastSSE({ type: 'bill_requested', quiosque, cliente_nome, pedidos });
+    res.json({ success: true, count });
+  });
+
+  app.post('/api/clients/pay-bill', (req, res) => {
+    const { quiosque, cliente_nome } = req.body;
+    pedidos.forEach(p => {
+      if (p.quiosque.toLowerCase() === quiosque.toLowerCase() && p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase()) {
+        p.status = 'Entregue';
+        p.conta_solicitada = false;
+      }
+    });
+    broadcastSSE({ type: 'bill_paid', quiosque, cliente_nome, pedidos });
+    res.json({ success: true });
   });
 
   // Vite middleware for development

@@ -24,6 +24,7 @@ export interface Cliente {
   id: string;
   nome: string;
   quiosque: string;
+  celular?: string;
   created_at?: string;
 }
 
@@ -51,6 +52,7 @@ export interface Pedido {
   created_at: string;
   itens: PedidoItem[];
   synced?: boolean; // tracking offline synchronization status
+  conta_solicitada?: boolean;
 }
 
 export interface ConfigEstabelecimento {

@@ -6,7 +6,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { ShoppingBag, ClipboardList, Database, LogIn, RefreshCw, Smartphone } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Categoria, Produto, Pedido, ConfigEstabelecimento, OrderStatus, PedidoItem } from './types';
+import { Categoria, Produto, Pedido, ConfigEstabelecimento, OrderStatus, PedidoItem, Cliente } from './types';
 import { DEFAULT_PRODUTOS, DEFAULT_CATEGORIAS, DEFAULT_CONFIG } from './lib/establishment';
 import { offlineDB } from './lib/db';
 import { getSupabase, hasSupabaseConfig } from './lib/supabase';
@@ -79,6 +79,9 @@ export default function App() {
   const [clienteQuiosque, setClienteQuiosque] = useState<string | null>(
     safeStorage.getItem('cliente_quiosque')
   );
+  const [clienteCelular, setClienteCelular] = useState<string | null>(
+    safeStorage.getItem('cliente_celular')
+  );
   const [activeView, setActiveView] = useState<'identification' | 'cardapio' | 'orders_status' | 'admin'>(
     safeStorage.getItem('cliente_nome') ? 'cardapio' : 'identification'
   );
@@ -88,6 +91,7 @@ export default function App() {
   const [categorias, setCategorias] = useState<Categoria[]>(DEFAULT_CATEGORIAS);
   const [config, setConfig] = useState<ConfigEstabelecimento>(DEFAULT_CONFIG);
   const [orders, setOrders] = useState<Pedido[]>([]);
+  const [clientes, setClientes] = useState<Cliente[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
 
   // Interactive controls
@@ -182,6 +186,65 @@ export default function App() {
     initLocalDBs();
   }, []);
 
+  // Fetch orders from either Supabase or local server (REST fallback)
+  const fetchOrders = useCallback(async () => {
+    try {
+      const realSupabase = getSupabase();
+      if (realSupabase && hasSupabaseConfig) {
+        const { data: orderData, error } = await realSupabase
+          .from('pedidos')
+          .select('*, pedido_itens(*)')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (orderData) {
+          const mappedOrders = orderData.map((o: any) => ({
+            id: o.id,
+            cliente_nome: o.cliente_nome,
+            quiosque: o.quiosque,
+            status: o.status,
+            valor_total: parseFloat(o.valor_total),
+            taxa_servico: parseFloat(o.taxa_servico),
+            valor_final: parseFloat(o.valor_final),
+            observacoes: o.observacoes,
+            created_at: o.created_at,
+            itens: o.pedido_itens.map((it: any) => ({
+              produto_id: it.produto_id,
+              produto_nome: it.produto_nome,
+              quantidade: it.quantidade,
+              valor: parseFloat(it.valor)
+            }))
+          }));
+          setOrders(mappedOrders);
+        }
+      } else {
+        const res = await fetch('/api/orders');
+        if (res.ok) {
+          const data = await res.json();
+          setOrders(data);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching orders:', err);
+    }
+  }, []);
+
+  // Periodic background status check fallback for mobile/tablet browsers
+  useEffect(() => {
+    if (activeView !== 'orders_status') return;
+
+    // Fetch immediately when entering Meus Pedidos
+    fetchOrders();
+
+    // Set up an 8-second interval for guaranteed updates (bypasses mobile/tablet webview background socket suspends)
+    const interval = setInterval(() => {
+      fetchOrders();
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, [activeView, fetchOrders]);
+
   // real-time data sync handler (SSE or Supabase Realtime)
   useEffect(() => {
     const realSupabase = getSupabase();
@@ -214,27 +277,12 @@ export default function App() {
             await offlineDB.saveProdutos(mappedProds);
           }
 
-          const { data: orderData } = await realSupabase.from('pedidos').select('*, pedido_itens(*)').order('created_at', { ascending: false });
-          if (orderData) {
-            const mappedOrders = orderData.map((o: any) => ({
-              id: o.id,
-              cliente_nome: o.cliente_nome,
-              quiosque: o.quiosque,
-              status: o.status,
-              valor_total: parseFloat(o.valor_total),
-              taxa_servico: parseFloat(o.taxa_servico),
-              valor_final: parseFloat(o.valor_final),
-              observacoes: o.observacoes,
-              created_at: o.created_at,
-              itens: o.pedido_itens.map((it: any) => ({
-                produto_id: it.produto_id,
-                produto_nome: it.produto_nome,
-                quantidade: it.quantidade,
-                valor: parseFloat(it.valor)
-              }))
-            }));
-            setOrders(mappedOrders);
+          const { data: clientData } = await realSupabase.from('clientes').select('*').order('created_at', { ascending: false });
+          if (clientData) {
+            setClientes(clientData);
           }
+
+          await fetchOrders();
         } catch (err) {
           console.error('Supabase fetch error:', err);
           setSupabaseStatus('disconnected');
@@ -254,14 +302,24 @@ export default function App() {
       const ordersSub = realSupabase
         .channel('public:pedidos')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
-          fetchSupabaseInitial();
+          fetchOrders();
           showToast('Lista de pedidos atualizada na nuvem!', 'info');
+        })
+        .subscribe();
+
+      const clientsSub = realSupabase
+        .channel('public:clientes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'clientes' }, () => {
+          realSupabase.from('clientes').select('*').order('created_at', { ascending: false }).then(({ data }) => {
+            if (data) setClientes(data);
+          });
         })
         .subscribe();
 
       return () => {
         productsSub.unsubscribe();
         ordersSub.unsubscribe();
+        clientsSub.unsubscribe();
       };
     } else {
       // Setup Server-Sent Events stream from the local Express server (unconfigured Supabase fallback)
@@ -277,6 +335,9 @@ export default function App() {
             setProdutos(data.produtos);
             setCategorias(data.categorias);
             setConfig(data.config);
+            if (data.clientes) {
+              setClientes(data.clientes);
+            }
             // Save cache
             offlineDB.saveProdutos(data.produtos);
             offlineDB.saveCategorias(data.categorias);
@@ -292,6 +353,35 @@ export default function App() {
               prev.map((o) => (o.id === data.order.id ? data.order : o))
             );
             showToast(`Pedido #${data.order.id.slice(-4).toUpperCase()} está ${data.order.status}!`, 'info');
+          } else if (data.type === 'client_created') {
+            setClientes((prev) => [data.client, ...prev]);
+          } else if (data.type === 'bill_requested') {
+            setOrders((prev) =>
+              prev.map((o) => {
+                if (
+                  o.quiosque.toLowerCase() === data.quiosque.toLowerCase() &&
+                  o.cliente_nome.toLowerCase() === data.cliente_nome.toLowerCase() &&
+                  o.status !== 'Cancelado'
+                ) {
+                  return { ...o, conta_solicitada: true };
+                }
+                return o;
+              })
+            );
+            showToast(`Mesa ${data.quiosque} (${data.cliente_nome}) solicitou o fechamento da conta!`, 'warning');
+          } else if (data.type === 'bill_paid') {
+            setOrders((prev) =>
+              prev.map((o) => {
+                if (
+                  o.quiosque.toLowerCase() === data.quiosque.toLowerCase() &&
+                  o.cliente_nome.toLowerCase() === data.cliente_nome.toLowerCase()
+                ) {
+                  return { ...o, status: 'Entregue', conta_solicitada: false };
+                }
+                return o;
+              })
+            );
+            showToast(`Conta da mesa ${data.quiosque} (${data.cliente_nome}) foi fechada!`, 'success');
           } else if (data.type === 'product_created' || data.type === 'product_updated' || data.type === 'product_deleted') {
             // Refetch or update products
             fetch('/api/products')
@@ -406,11 +496,38 @@ export default function App() {
   };
 
   // Client Identification submit
-  const handleIdentify = (nome: string, quiosque: string) => {
+  const handleIdentify = async (nome: string, quiosque: string, celular: string) => {
     setClienteNome(nome);
     setClienteQuiosque(quiosque);
+    setClienteCelular(celular);
     safeStorage.setItem('cliente_nome', nome);
     safeStorage.setItem('cliente_quiosque', quiosque);
+    safeStorage.setItem('cliente_celular', celular);
+
+    // Save to database
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        await realSupabase.from('clientes').insert({
+          nome,
+          quiosque,
+          celular
+        });
+      } catch (err) {
+        console.error('Error inserting client into Supabase:', err);
+      }
+    } else {
+      try {
+        await fetch('/api/clients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nome, quiosque, celular })
+        });
+      } catch (err) {
+        console.error('Error registering client locally:', err);
+      }
+    }
+
     setActiveView('cardapio');
     showToast(`Bem-vindo, ${nome}! Boas compras.`, 'success');
   };
@@ -419,8 +536,10 @@ export default function App() {
   const handleLogout = () => {
     setClienteNome(null);
     setClienteQuiosque(null);
+    setClienteCelular(null);
     safeStorage.removeItem('cliente_nome');
     safeStorage.removeItem('cliente_quiosque');
+    safeStorage.removeItem('cliente_celular');
     setCart({});
     setActiveView('identification');
   };
@@ -555,6 +674,110 @@ export default function App() {
     setCart({});
     setShowCart(false);
     setActiveView('orders_status');
+  };
+
+  // CLIENT OPERATIONS (Cancel & Request Bill)
+  const handleCancelOrder = async (orderId: string) => {
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig && isValidUUID(orderId)) {
+      try {
+        await realSupabase
+          .from('pedidos')
+          .update({ status: 'Cancelado' })
+          .eq('id', orderId);
+        showToast('Pedido cancelado com sucesso!', 'success');
+        fetchOrders();
+      } catch (err) {
+        console.error('Error cancelling order on Supabase:', err);
+        showToast('Erro ao cancelar pedido.', 'error');
+      }
+    } else {
+      try {
+        const res = await fetch(`/api/orders/${orderId}/status`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'Cancelado' })
+        });
+        if (res.ok) {
+          showToast('Pedido cancelado com sucesso!', 'success');
+        } else {
+          showToast('Erro ao cancelar pedido.', 'error');
+        }
+      } catch (err) {
+        console.error('Error cancelling order locally:', err);
+        showToast('Erro ao cancelar pedido.', 'error');
+      }
+    }
+  };
+
+  const handleCloseBill = async () => {
+    if (!clienteNome || !clienteQuiosque) return;
+    try {
+      const res = await fetch('/api/clients/close-bill', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ quiosque: clienteQuiosque, cliente_nome: clienteNome })
+      });
+      if (res.ok) {
+        showToast('Sua solicitação de fechamento de conta foi enviada ao garçom!', 'success');
+        // Also update local orders list immediately to have conta_solicitada
+        setOrders(prev =>
+          prev.map(o => {
+            if (
+              o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
+              o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
+              o.status !== 'Cancelado'
+            ) {
+              return { ...o, conta_solicitada: true };
+            }
+            return o;
+          })
+        );
+      } else {
+        showToast('Erro ao solicitar fechamento de conta.', 'error');
+      }
+    } catch (err) {
+      console.error('Error requesting bill locally:', err);
+      showToast('Erro ao solicitar fechamento de conta.', 'error');
+    }
+  };
+
+  const handlePayBill = async (quiosque: string, cliNome: string) => {
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        const { data: activeOrders } = await realSupabase
+          .from('pedidos')
+          .select('id')
+          .eq('quiosque', quiosque)
+          .eq('cliente_nome', cliNome);
+          
+        if (activeOrders && activeOrders.length > 0) {
+          const ids = activeOrders.map(o => o.id);
+          await realSupabase
+            .from('pedidos')
+            .update({ status: 'Entregue' })
+            .in('id', ids);
+        }
+        showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
+        fetchOrders();
+      } catch (err) {
+        console.error('Error paying bill on Supabase:', err);
+      }
+    } else {
+      try {
+        const res = await fetch('/api/clients/pay-bill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quiosque, cliente_nome: cliNome })
+        });
+        if (res.ok) {
+          showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
+        }
+      } catch (err) {
+        console.error('Error paying bill locally:', err);
+      }
+    }
   };
 
   // ADMIN OPERATIONS (CRUD & status updates)
@@ -1109,6 +1332,9 @@ export default function App() {
             <PedidosStatus
               orders={localOrderHistoryList}
               onBackToMenu={() => setActiveView('cardapio')}
+              onRefresh={fetchOrders}
+              onCancelOrder={handleCancelOrder}
+              onCloseBill={handleCloseBill}
             />
 
             {/* Same quick access bottom navigation */}
@@ -1143,6 +1369,8 @@ export default function App() {
               products={produtos}
               categorias={categorias}
               config={config}
+              clientes={clientes}
+              onPayBill={handlePayBill}
               onUpdateOrderStatus={handleUpdateOrderStatus}
               onAddProduct={handleAddProduct}
               onUpdateProduct={handleUpdateProduct}

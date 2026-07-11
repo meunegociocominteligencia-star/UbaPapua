@@ -48,7 +48,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus } from '../types';
+import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus, Cliente } from '../types';
 import { SUPABASE_SQL_SETUP, hasSupabaseConfig } from '../lib/supabase';
 
 interface AdminPanelProps {
@@ -56,6 +56,8 @@ interface AdminPanelProps {
   products: Produto[];
   categorias: Categoria[];
   config: ConfigEstabelecimento;
+  clientes?: Cliente[];
+  onPayBill?: (quiosque: string, clienteNome: string) => void;
   onUpdateOrderStatus: (id: string, status: OrderStatus) => void;
   onAddProduct: (prod: Omit<Produto, 'id'>) => void;
   onUpdateProduct: (id: string, prod: Partial<Produto>) => void;
@@ -74,6 +76,8 @@ export function AdminPanel({
   products,
   categorias,
   config,
+  clientes = [],
+  onPayBill,
   onUpdateOrderStatus,
   onAddProduct,
   onUpdateProduct,
@@ -86,7 +90,7 @@ export function AdminPanel({
   onClose,
   supabaseStatus
 }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports'>('orders');
+  const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports' | 'clientes'>('orders');
   const [prodPeriod, setProdPeriod] = useState<'today' | '7days' | '30days' | 'all'>('all');
   const [revenuePeriod, setRevenuePeriod] = useState<'daily' | 'monthly' | 'annual'>('daily');
   const [isSyncing, setIsSyncing] = useState(false);
@@ -500,6 +504,23 @@ export function AdminPanel({
             </button>
 
             <button
+              onClick={() => setActiveTab('clientes')}
+              className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
+                activeTab === 'clientes'
+                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
+                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+              }`}
+            >
+              <Phone className="h-4 w-4" />
+              <span>Clientes Cadastrados</span>
+              {clientes.length > 0 && (
+                <span className="ml-auto bg-amber-500 text-white font-black px-2 py-0.5 rounded-full text-[9px]">
+                  {clientes.length}
+                </span>
+              )}
+            </button>
+
+            <button
               onClick={() => setActiveTab('settings')}
               className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                 activeTab === 'settings'
@@ -616,7 +637,9 @@ export function AdminPanel({
                       key={order.id}
                       layout
                       className={`p-5 bg-white border rounded-2xl shadow-sm transition-all ${
-                        order.status === 'Recebido'
+                        order.conta_solicitada && order.status !== 'Entregue' && order.status !== 'Cancelado'
+                          ? 'border-amber-400 bg-amber-50/30 ring-2 ring-amber-400/50 shadow-md'
+                          : order.status === 'Recebido'
                           ? 'border-green-200 bg-green-50/25'
                           : order.status === 'Em preparo'
                           ? 'border-amber-200 bg-amber-50/25'
@@ -634,6 +657,12 @@ export function AdminPanel({
                             <span className="font-extrabold text-xs text-[#1E5E3A] bg-[#F4EFE6] px-2.5 py-0.5 rounded-lg border border-[#E3DCD2]">
                               {order.quiosque}
                             </span>
+                            {order.conta_solicitada && order.status !== 'Entregue' && order.status !== 'Cancelado' && (
+                              <span className="bg-amber-100 border border-amber-300 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 animate-pulse uppercase tracking-wider">
+                                <span className="w-1 h-1 rounded-full bg-amber-600 animate-ping"></span>
+                                Solicitou Conta
+                              </span>
+                            )}
                             <span className="text-xs text-[#9C8E7B] ml-auto md:ml-0">
                               {new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
@@ -722,11 +751,89 @@ export function AdminPanel({
                                 Cancelar
                               </button>
                             )}
+
+                            {order.conta_solicitada && order.status !== 'Entregue' && order.status !== 'Cancelado' && onPayBill && (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Confirmar recebimento do pagamento e fechamento da conta de ${order.cliente_nome} (${order.quiosque})?`)) {
+                                    onPayBill(order.quiosque, order.cliente_nome);
+                                  }
+                                }}
+                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[10px] px-3 py-2.5 rounded-xl uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-amber-100"
+                              >
+                                💳 Confirmar Pagamento
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
                     </motion.div>
                   ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {activeTab === 'clientes' && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+                <div>
+                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Clientes Cadastrados</h2>
+                  <p className="text-xs text-[#706558]">Lista de todos os clientes identificados e registrados no banco de dados</p>
+                </div>
+              </div>
+
+              {clientes.length === 0 ? (
+                <div className="bg-white border border-[#E3DCD2] rounded-[32px] p-12 text-center space-y-3 shadow-sm">
+                  <div className="text-4xl">👥</div>
+                  <h4 className="text-sm font-bold text-[#9C8E7B]">Nenhum cliente cadastrado ainda</h4>
+                  <p className="text-xs text-[#706558] max-w-xs mx-auto">
+                    Assim que novos clientes se identificarem ao entrar no app, eles aparecerão aqui em tempo real.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white border border-[#E3DCD2] rounded-3xl overflow-hidden shadow-sm">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse text-xs">
+                      <thead>
+                        <tr className="bg-[#FCFBF9] border-b border-[#E3DCD2] text-[#706558] font-bold">
+                          <th className="p-4">Nome</th>
+                          <th className="p-4">Mesa / Quiosque</th>
+                          <th className="p-4">Celular / WhatsApp</th>
+                          <th className="p-4">Data de Cadastro</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[#E3DCD2]/50">
+                        {clientes.map((client) => (
+                          <tr key={client.id || client.nome} className="hover:bg-[#FCFBF9] transition-colors text-[#1B3322]">
+                            <td className="p-4 font-bold">{client.nome}</td>
+                            <td className="p-4">
+                              <span className="px-2.5 py-1 bg-[#F4EFE6] border border-[#E3DCD2] rounded-lg font-black text-[#1E5E3A]">
+                                {client.quiosque}
+                              </span>
+                            </td>
+                            <td className="p-4 font-mono font-medium">
+                              {client.celular ? (
+                                <a
+                                  href={`https://wa.me/55${client.celular.replace(/\D/g, '')}`}
+                                  target="_blank"
+                                  referrerPolicy="no-referrer"
+                                  className="text-[#0077BE] hover:underline flex items-center gap-1 font-bold"
+                                >
+                                  <Phone className="h-3 w-3" /> {client.celular}
+                                </a>
+                              ) : (
+                                <span className="text-[#9C8E7B]">Não informado</span>
+                              )}
+                            </td>
+                            <td className="p-4 text-[#706558]">
+                              {client.created_at ? new Date(client.created_at).toLocaleString() : 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               )}
             </div>
