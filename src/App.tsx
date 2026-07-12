@@ -886,13 +886,32 @@ export default function App() {
   const handleCloseBill = async () => {
     if (!clienteNome || !clienteQuiosque) return;
 
-    // Calculate total bill amount from the client's non-cancelled orders
-    const clientActiveOrders = orders.filter(o => 
-      o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
-      o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
-      o.status !== 'Cancelado' &&
-      !o.pago
-    );
+    const clientCel = safeStorage.getItem('cliente_celular') || clienteCelular || '';
+    const clientActiveOrders = orders.filter(o => {
+      if (o.status === 'Cancelado' || o.pago) return false;
+      
+      const orderPhone = (o.cliente_telefone || '').replace(/\D/g, '');
+      const clientPhoneNormalized = clientCel.replace(/\D/g, '');
+      if (clientPhoneNormalized && orderPhone && clientPhoneNormalized === orderPhone) {
+        return true;
+      }
+
+      const orderKiosk = (o.quiosque || '').trim().toLowerCase();
+      const clientKiosk = clienteQuiosque.trim().toLowerCase();
+      const orderName = (o.cliente_nome || '').trim().toLowerCase();
+      const clientName = clienteNome.trim().toLowerCase();
+
+      if (orderKiosk === clientKiosk) {
+        if (orderName === clientName) return true;
+        const orderFirstName = orderName.split(' ')[0];
+        const clientFirstName = clientName.split(' ')[0];
+        if (orderFirstName && clientFirstName && orderFirstName === clientFirstName) {
+          return true;
+        }
+      }
+      return false;
+    });
+
     const totalBillAmount = clientActiveOrders.reduce((sum, o) => sum + o.valor_final, 0);
 
     const realSupabase = getSupabase();
@@ -908,7 +927,6 @@ export default function App() {
         }
 
         // 2. Update client status in Supabase
-        const clientCel = safeStorage.getItem('cliente_celular') || '';
         if (clientCel) {
           await realSupabase
             .from('clientes')
@@ -929,21 +947,7 @@ export default function App() {
         }
 
         showToast('Sua solicitação de fechamento de conta foi enviada ao garçom!', 'success');
-        
-        // Update local React state immediately
-        setOrders(prev =>
-          prev.map(o => {
-            if (
-              o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
-              o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
-              o.status !== 'Cancelado'
-            ) {
-              return { ...o, conta_solicitada: true };
-            }
-            return o;
-          })
-        );
-        fetchOrders();
+        await Promise.all([fetchOrders(), fetchClientes()]);
       } catch (err) {
         console.error('Error closing bill on Supabase:', err);
         showToast('Erro ao solicitar fechamento de conta.', 'error');
@@ -957,18 +961,7 @@ export default function App() {
         });
         if (res.ok) {
           showToast('Sua solicitação de fechamento de conta foi enviada ao garçom!', 'success');
-          setOrders(prev =>
-            prev.map(o => {
-              if (
-                o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
-                o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
-                o.status !== 'Cancelado'
-              ) {
-                return { ...o, conta_solicitada: true };
-              }
-              return o;
-            })
-          );
+          await Promise.all([fetchOrders(), fetchClientes()]);
         } else {
           showToast('Erro ao solicitar fechamento de conta.', 'error');
         }
@@ -980,38 +973,92 @@ export default function App() {
   };
 
   const handlePayBill = async (quiosque: string, cliNome: string) => {
+    // Find client in state
+    const client = clientes.find(c => 
+      c.quiosque.toLowerCase() === quiosque.toLowerCase() && 
+      c.nome.toLowerCase() === cliNome.toLowerCase()
+    );
+
+    const clientPhone = client ? (client.celular || client.telefone || '').replace(/\D/g, '') : '';
+
+    // Match order ids identically to getClientStatus
+    const matchingOrderIds = orders
+      .filter(order => {
+        if (order.status === 'Cancelado' || order.pago) return false;
+
+        const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
+        if (clientPhone && orderPhone && clientPhone === orderPhone) {
+          return true;
+        }
+
+        const orderKiosk = (order.quiosque || '').trim().toLowerCase();
+        const clientKiosk = quiosque.trim().toLowerCase();
+        const orderName = (order.cliente_nome || '').trim().toLowerCase();
+        const clientName = cliNome.trim().toLowerCase();
+
+        if (orderKiosk === clientKiosk) {
+          if (orderName === clientName) return true;
+          const orderFirstName = orderName.split(' ')[0];
+          const clientFirstName = clientName.split(' ')[0];
+          if (orderFirstName && clientFirstName && orderFirstName === clientFirstName) {
+            return true;
+          }
+        }
+        return false;
+      })
+      .map(o => o.id);
+
     const realSupabase = getSupabase();
     if (realSupabase && hasSupabaseConfig) {
       try {
-        // 1. Update orders to 'Entregue' and false conta_solicitada
-        const { data: activeOrders } = await realSupabase
-          .from('pedidos')
-          .select('id')
-          .eq('quiosque', quiosque)
-          .eq('cliente_nome', cliNome);
-          
-        if (activeOrders && activeOrders.length > 0) {
-          const ids = activeOrders.map(o => o.id);
+        // 1. Update orders to 'Entregue' and false conta_solicitada, pago = true
+        if (matchingOrderIds.length > 0) {
           await realSupabase
             .from('pedidos')
             .update({ status: 'Entregue', conta_solicitada: false, pago: true })
-            .in('id', ids);
+            .in('id', matchingOrderIds);
+        } else {
+          // Fallback exact matching
+          const { data: activeOrders } = await realSupabase
+            .from('pedidos')
+            .select('id')
+            .eq('quiosque', quiosque)
+            .eq('cliente_nome', cliNome);
+            
+          if (activeOrders && activeOrders.length > 0) {
+            const ids = activeOrders.map(o => o.id);
+            await realSupabase
+              .from('pedidos')
+              .update({ status: 'Entregue', conta_solicitada: false, pago: true })
+              .in('id', ids);
+          }
         }
 
         // 2. Update client status to 'Conta Paga'
-        await realSupabase
-          .from('clientes')
-          .update({ 
-            status_conta: 'Conta Paga', 
-            valor_total_conta: 0 
-          })
-          .eq('nome', cliNome)
-          .eq('quiosque', quiosque);
+        if (client && (client.telefone || client.celular)) {
+          await realSupabase
+            .from('clientes')
+            .update({ 
+              status_conta: 'Conta Paga', 
+              valor_total_conta: 0 
+            })
+            .eq('telefone', client.telefone || client.celular);
+        } else {
+          await realSupabase
+            .from('clientes')
+            .update({ 
+              status_conta: 'Conta Paga', 
+              valor_total_conta: 0 
+            })
+            .eq('nome', cliNome)
+            .eq('quiosque', quiosque);
+        }
 
         showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
-        fetchOrders();
+        await Promise.all([fetchOrders(), fetchClientes()]);
       } catch (err) {
         console.error('Error paying bill on Supabase:', err);
+        showToast('Erro ao finalizar conta no servidor.', 'error');
       }
     } else {
       try {
@@ -1022,9 +1069,13 @@ export default function App() {
         });
         if (res.ok) {
           showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
+          await Promise.all([fetchOrders(), fetchClientes()]);
+        } else {
+          showToast('Erro ao finalizar conta no servidor.', 'error');
         }
       } catch (err) {
         console.error('Error paying bill locally:', err);
+        showToast('Erro ao finalizar conta localmente.', 'error');
       }
     }
   };

@@ -7,9 +7,10 @@ export function getApiUrl(path: string): string {
 
   // Detect if running inside a native mobile app wrapper (Capacitor/Cordova)
   const isNative = 
+    (typeof window !== 'undefined' && (window as any).Capacitor) ||
     window.location.protocol === 'capacitor:' || 
     window.location.protocol === 'file:' || 
-    window.location.protocol === 'http:' && window.location.hostname === 'localhost' && !window.location.port;
+    ((window.location.protocol === 'http:' || window.location.protocol === 'https:') && window.location.hostname === 'localhost' && !window.location.port);
 
   if (isNative) {
     // If running in APK, route requests to the hosted web server

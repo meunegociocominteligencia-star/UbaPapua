@@ -19,7 +19,6 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-size: 'large'
           node-version: 22
           cache: 'npm'
 
@@ -31,6 +30,8 @@ jobs:
         env:
           NODE_ENV: production
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://ais-pre-qbyy2na74rv3l2g37lryrb-559951806594.us-east1.run.app' }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL || 'https://tilpkngvdadkciyfrigp.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpbHBrbmd2ZGFka2NpeWZyaWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2Nzc2MTgsImV4cCI6MjA5OTI1MzYxOH0.gJeyx9rZMdt3hykUCk2nTo9xOYSu2DXVPwQoz8nXDMQ' }}
 
       - name: Set up Java JDK 21
         uses: actions/setup-java@v4
