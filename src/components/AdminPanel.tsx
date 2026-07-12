@@ -101,6 +101,66 @@ export function AdminPanel({
   supabaseStatus
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports' | 'clientes' | 'team'>('orders');
+
+  // Helper to dynamically calculate total consumed by a client from unpaid orders
+  const getClientTotalConsumed = (client: Cliente) => {
+    const matchingOrders = orders.filter(order => {
+      const clientPhone = (client.celular || client.telefone || '').replace(/\D/g, '');
+      const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
+      if (clientPhone && orderPhone && clientPhone === orderPhone) {
+        return true;
+      }
+      
+      const orderName = (order.cliente_nome || '').trim().toLowerCase();
+      const clientName = (client.nome || '').trim().toLowerCase();
+      const orderKiosk = (order.quiosque || '').trim().toLowerCase();
+      const clientKiosk = (client.quiosque || '').trim().toLowerCase();
+      
+      if (orderKiosk === clientKiosk) {
+        if (orderName === clientName) return true;
+        const orderFirstName = orderName.split(' ')[0];
+        const clientFirstName = clientName.split(' ')[0];
+        if (orderFirstName && clientFirstName && orderFirstName === clientFirstName) {
+          return true;
+        }
+      }
+      return false;
+    });
+
+    const activeOrders = matchingOrders.filter(o => o.status !== 'Cancelado' && !o.pago);
+    const ordersTotal = activeOrders.reduce((sum, o) => sum + o.valor_final, 0);
+
+    if (client.status_conta === 'Conta em Aberto') {
+      return client.valor_total_conta || ordersTotal;
+    }
+    
+    return ordersTotal;
+  };
+
+  // Helper to dynamically get client status
+  const getClientStatus = (client: Cliente) => {
+    if (client.status_conta === 'Conta em Aberto') {
+      return 'Conta em Aberto';
+    }
+    
+    const hasRequested = orders.some(order => {
+      const clientPhone = (client.celular || client.telefone || '').replace(/\D/g, '');
+      const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
+      const phoneMatches = clientPhone && orderPhone && clientPhone === orderPhone;
+      
+      const orderKiosk = (order.quiosque || '').trim().toLowerCase();
+      const clientKiosk = (client.quiosque || '').trim().toLowerCase();
+      const orderName = (order.cliente_nome || '').trim().toLowerCase();
+      const clientName = (client.nome || '').trim().toLowerCase();
+      const orderFirstName = orderName.split(' ')[0];
+      const clientFirstName = clientName.split(' ')[0];
+      const nameKioskMatches = orderKiosk === clientKiosk && (orderName === clientName || (orderFirstName && clientFirstName && orderFirstName === clientFirstName));
+
+      return (phoneMatches || nameKioskMatches) && order.status !== 'Cancelado' && !order.pago && order.conta_solicitada;
+    });
+
+    return hasRequested ? 'Conta em Aberto' : (client.status_conta || 'Conta Paga');
+  };
   
   // Administrative & Waiter Session Auth State
   const [adminUser, setAdminUser] = useState<'admin' | 'garcom' | null>(() => {
@@ -1410,22 +1470,22 @@ export function AdminPanel({
                             <td className="p-4">
                               <span
                                 className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                                  client.status_conta === 'Conta em Aberto'
+                                  getClientStatus(client) === 'Conta em Aberto'
                                     ? 'bg-amber-100 border border-amber-300 text-amber-800 animate-pulse'
                                     : 'bg-green-100 border border-green-300 text-green-800'
                                 }`}
                               >
-                                {client.status_conta || 'Conta Paga'}
+                                {getClientStatus(client)}
                               </span>
                             </td>
                             <td className="p-4 font-bold text-[#1E5E3A]">
-                              R$ {(client.valor_total_conta || 0).toFixed(2)}
+                              R$ {getClientTotalConsumed(client).toFixed(2)}
                             </td>
                             <td className="p-4 text-right">
-                              {client.status_conta === 'Conta em Aberto' && onPayBill && (
+                              {getClientStatus(client) === 'Conta em Aberto' && onPayBill && (
                                 <button
                                   onClick={() => {
-                                    if (window.confirm(`Confirmar recebimento do pagamento de R$ ${(client.valor_total_conta || 0).toFixed(2)} de ${client.nome}?`)) {
+                                    if (window.confirm(`Confirmar recebimento do pagamento de R$ ${getClientTotalConsumed(client).toFixed(2)} de ${client.nome}?`)) {
                                       onPayBill(client.quiosque, client.nome);
                                     }
                                   }}
@@ -2346,23 +2406,23 @@ export function AdminPanel({
                               <td className="py-3.5 text-xs text-center font-bold">
                                 <span
                                   className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${
-                                    cli.status_conta === 'Conta em Aberto'
+                                    getClientStatus(cli) === 'Conta em Aberto'
                                       ? 'bg-amber-100 border border-amber-300 text-amber-800 animate-pulse'
                                       : 'bg-green-100 border border-green-300 text-green-800'
                                   }`}
                                 >
-                                  {cli.status_conta || 'Conta Paga'}
+                                  {getClientStatus(cli)}
                                 </span>
                               </td>
                               <td className="py-3.5 text-xs text-center font-bold text-[#1E5E3A]">
-                                R$ {(cli.valor_total_conta || 0).toFixed(2)}
+                                R$ {getClientTotalConsumed(cli).toFixed(2)}
                               </td>
                               <td className="py-3.5 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {cli.status_conta === 'Conta em Aberto' && onPayBill && (
+                                  {getClientStatus(cli) === 'Conta em Aberto' && onPayBill && (
                                     <button
                                       onClick={() => {
-                                        if (window.confirm(`Deseja dar baixa na conta de R$ ${(cli.valor_total_conta || 0).toFixed(2)} de ${cli.nome}?`)) {
+                                        if (window.confirm(`Deseja dar baixa na conta de R$ ${getClientTotalConsumed(cli).toFixed(2)} de ${cli.nome}?`)) {
                                           onPayBill(cli.quiosque, cli.nome);
                                         }
                                       }}

@@ -241,6 +241,8 @@ export default function App() {
             valor_final: parseFloat(o.valor_final),
             observacoes: o.observacoes,
             created_at: o.created_at,
+            conta_solicitada: !!o.conta_solicitada,
+            pago: !!o.pago,
             itens: o.pedido_itens.map((it: any) => ({
               produto_id: it.produto_id,
               produto_nome: it.produto_nome,
@@ -854,7 +856,8 @@ export default function App() {
     const clientActiveOrders = orders.filter(o => 
       o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
       o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
-      o.status !== 'Cancelado'
+      o.status !== 'Cancelado' &&
+      !o.pago
     );
     const totalBillAmount = clientActiveOrders.reduce((sum, o) => sum + o.valor_final, 0);
 
@@ -862,15 +865,8 @@ export default function App() {
     if (realSupabase && hasSupabaseConfig) {
       try {
         // 1. Update orders in Supabase
-        const { data: activeOrdersDb } = await realSupabase
-          .from('pedidos')
-          .select('id')
-          .eq('quiosque', clienteQuiosque)
-          .eq('cliente_nome', clienteNome)
-          .neq('status', 'Cancelado');
-
-        if (activeOrdersDb && activeOrdersDb.length > 0) {
-          const ids = activeOrdersDb.map(o => o.id);
+        if (clientActiveOrders.length > 0) {
+          const ids = clientActiveOrders.map(o => o.id);
           await realSupabase
             .from('pedidos')
             .update({ conta_solicitada: true })
@@ -964,7 +960,7 @@ export default function App() {
           const ids = activeOrders.map(o => o.id);
           await realSupabase
             .from('pedidos')
-            .update({ status: 'Entregue', conta_solicitada: false })
+            .update({ status: 'Entregue', conta_solicitada: false, pago: true })
             .in('id', ids);
         }
 

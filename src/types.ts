@@ -58,6 +58,7 @@ export interface Pedido {
   itens: PedidoItem[];
   synced?: boolean; // tracking offline synchronization status
   conta_solicitada?: boolean;
+  pago?: boolean;
 }
 
 export interface ConfigEstabelecimento {

@@ -764,7 +764,12 @@ async function startServer() {
     let count = 0;
     let totalBill = 0;
     pedidos.forEach(p => {
-      if (p.quiosque.toLowerCase() === quiosque.toLowerCase() && p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase() && p.status !== 'Cancelado') {
+      if (
+        p.quiosque.toLowerCase() === quiosque.toLowerCase() &&
+        p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase() &&
+        p.status !== 'Cancelado' &&
+        !p.pago
+      ) {
         p.conta_solicitada = true;
         totalBill += p.valor_final;
         count++;
@@ -803,6 +808,7 @@ async function startServer() {
       if (p.quiosque.toLowerCase() === quiosque.toLowerCase() && p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase()) {
         p.status = 'Entregue';
         p.conta_solicitada = false;
+        p.pago = true;
       }
     });
 

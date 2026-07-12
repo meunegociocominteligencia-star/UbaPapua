@@ -99,6 +99,9 @@ CREATE TABLE IF NOT EXISTS pedidos (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS conta_solicitada BOOLEAN DEFAULT FALSE;
+ALTER TABLE pedidos ADD COLUMN IF NOT EXISTS pago BOOLEAN DEFAULT FALSE;
+
 -- 5. Criar tabela de Itens do Pedido
 CREATE TABLE IF NOT EXISTS pedido_itens (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
