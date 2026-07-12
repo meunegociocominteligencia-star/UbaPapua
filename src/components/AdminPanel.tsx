@@ -53,6 +53,7 @@ import {
 } from 'recharts';
 import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus, Cliente } from '../types';
 import { SUPABASE_SQL_SETUP, hasSupabaseConfig, getSupabase } from '../lib/supabase';
+import { getApiUrl } from '../lib/api';
 
 interface AdminPanelProps {
   orders: Pedido[];
@@ -148,7 +149,7 @@ export function AdminPanel({
   const fetchTeamUsers = async () => {
     setIsLoadingUsers(true);
     try {
-      const res = await fetch('/api/admin/users');
+      const res = await fetch(getApiUrl('/api/admin/users'));
       if (res.ok) {
         const data = await res.json();
         setTeamUsers(data);
@@ -172,7 +173,7 @@ export function AdminPanel({
     const pass = passwordInput;
 
     try {
-      const res = await fetch('/api/admin/login', {
+      const res = await fetch(getApiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ usuario: user, senha: pass })
@@ -254,7 +255,7 @@ export function AdminPanel({
     }
 
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await fetch(getApiUrl('/api/admin/users'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userForm)
@@ -282,7 +283,7 @@ export function AdminPanel({
     }
 
     try {
-      const res = await fetch(`/api/admin/users/${editingUser.id}`, {
+      const res = await fetch(getApiUrl(`/api/admin/users/${editingUser.id}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(editingUser)
@@ -308,7 +309,7 @@ export function AdminPanel({
     if (!confirm('Deseja realmente remover este usuário da equipe?')) return;
 
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
+      const res = await fetch(getApiUrl(`/api/admin/users/${id}`), {
         method: 'DELETE'
       });
       if (res.ok) {
@@ -408,7 +409,7 @@ export function AdminPanel({
 
     if (!savedOnline) {
       try {
-        const res = await fetch('/api/orders', {
+        const res = await fetch(getApiUrl('/api/orders'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(newOrder)
@@ -441,7 +442,7 @@ export function AdminPanel({
         }
       } else {
         try {
-          await fetch('/api/clients', {
+          await fetch(getApiUrl('/api/clients'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newClientData)
@@ -696,6 +697,10 @@ export function AdminPanel({
   // Settings State
   const [settingsForm, setSettingsForm] = useState({ ...config });
 
+  useEffect(() => {
+    setSettingsForm({ ...config });
+  }, [config]);
+
   // Clients CRUD State
   const [isAddingClient, setIsAddingClient] = useState(false);
   const [editingClient, setEditingClient] = useState<Cliente | null>(null);
@@ -948,7 +953,13 @@ export function AdminPanel({
         <div className="p-6">
           <div className="flex items-center gap-3 border-b border-[#E3DCD2] pb-5 mb-5 justify-between">
             <div className="flex items-center gap-2">
-              <span className="text-2xl">{config.logo || '🥥'}</span>
+              <div className="w-8 h-8 rounded-full bg-[#FCFBF9] border border-[#E3DCD2] flex items-center justify-center overflow-hidden text-lg">
+                {config.logo && (config.logo.startsWith('http') || config.logo.startsWith('data:image')) ? (
+                  <img src={config.logo} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  config.logo || '🥥'
+                )}
+              </div>
               <div>
                 <h2 className="text-sm font-serif font-bold italic tracking-tight text-[#1B3322]">Dashboard</h2>
                 <p className="text-[10px] text-[#9C8E7B]">Gestão do Estabelecimento</p>
@@ -2361,15 +2372,77 @@ export function AdminPanel({
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Logotipo Emoji/Ícone</label>
-                    <input
-                      type="text"
-                      required
-                      value={settingsForm.logo}
-                      onChange={(e) => setSettingsForm({ ...settingsForm, logo: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
-                    />
+                  <div className="space-y-1.5 md:col-span-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl p-4">
+                    <label className="text-[10px] font-bold text-[#9C8E7B] uppercase block mb-1">Logotipo do Estabelecimento</label>
+                    <p className="text-[11px] text-[#706558] mb-3">
+                      Envie uma imagem com a logo do seu quiosque ou defina um emoji/texto personalizado.
+                    </p>
+                    
+                    <div className="flex flex-col sm:flex-row gap-4 items-center">
+                      {/* Logo Preview */}
+                      <div className="w-20 h-20 rounded-2xl bg-white border border-[#E3DCD2] flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0 relative group">
+                        {settingsForm.logo && (settingsForm.logo.startsWith('http') || settingsForm.logo.startsWith('data:image')) ? (
+                          <img src={settingsForm.logo} alt="Logo Preview" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="text-4xl">{settingsForm.logo || '🥥'}</span>
+                        )}
+                        {settingsForm.logo && (
+                          <button
+                            type="button"
+                            onClick={() => setSettingsForm({ ...settingsForm, logo: '🥥' })}
+                            className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold"
+                            title="Resetar para o padrão"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Upload/Selection Area */}
+                      <div className="flex-1 w-full space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {/* File input (Button style) */}
+                          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#E3DCD2] rounded-xl p-3 hover:border-[#1E5E3A] hover:bg-[#F4EFE6]/20 transition-all cursor-pointer">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="absolute inset-0 opacity-0 cursor-pointer"
+                              onChange={(e) => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                  if (file.size > 2 * 1024 * 1024) {
+                                    alert('A imagem deve ter no máximo 2MB.');
+                                    return;
+                                  }
+                                  const reader = new FileReader();
+                                  reader.onload = (ev) => {
+                                    if (ev.target?.result) {
+                                      setSettingsForm({ ...settingsForm, logo: ev.target.result as string });
+                                    }
+                                  };
+                                  reader.readAsDataURL(file);
+                                }
+                              }}
+                            />
+                            <Upload className="h-4 w-4 text-[#706558] mb-1" />
+                            <span className="text-[10px] font-bold text-[#1B3322]">Enviar Imagem</span>
+                            <span className="text-[9px] text-[#9C8E7B]">Até 2MB (PNG, JPG, SVG)</span>
+                          </div>
+
+                          {/* Text/Emoji input */}
+                          <div className="space-y-1.5 flex flex-col justify-center">
+                            <label className="text-[9px] font-bold text-[#706558] uppercase">Ou digite o emoji/texto:</label>
+                            <input
+                              type="text"
+                              value={settingsForm.logo.startsWith('data:image') || settingsForm.logo.startsWith('http') ? '' : settingsForm.logo}
+                              placeholder="Ex: 🌴, 🥥, Bella Costa"
+                              onChange={(e) => setSettingsForm({ ...settingsForm, logo: e.target.value })}
+                              className="w-full px-3 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="space-y-1.5">

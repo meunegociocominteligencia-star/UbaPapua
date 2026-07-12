@@ -10,6 +10,7 @@ import { Categoria, Produto, Pedido, ConfigEstabelecimento, OrderStatus, PedidoI
 import { DEFAULT_PRODUTOS, DEFAULT_CATEGORIAS, DEFAULT_CONFIG } from './lib/establishment';
 import { offlineDB } from './lib/db';
 import { getSupabase, hasSupabaseConfig } from './lib/supabase';
+import { getApiUrl } from './lib/api';
 import { NetworkStatus } from './components/NetworkStatus';
 import { ClientIdentification } from './components/ClientIdentification';
 import { Cardapio } from './components/Cardapio';
@@ -89,7 +90,26 @@ export default function App() {
   // Core content states
   const [produtos, setProdutos] = useState<Produto[]>(DEFAULT_PRODUTOS);
   const [categorias, setCategorias] = useState<Categoria[]>(DEFAULT_CATEGORIAS);
-  const [config, setConfig] = useState<ConfigEstabelecimento>(DEFAULT_CONFIG);
+  const [config, setConfig] = useState<ConfigEstabelecimento>(() => {
+    try {
+      const saved = safeStorage.getItem('establishment_config');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Erro ao ler establishment_config do cache:', e);
+    }
+    return DEFAULT_CONFIG;
+  });
+  
+  useEffect(() => {
+    try {
+      safeStorage.setItem('establishment_config', JSON.stringify(config));
+    } catch (e) {
+      console.warn('Erro ao salvar establishment_config no cache:', e);
+    }
+  }, [config]);
+
   const [orders, setOrders] = useState<Pedido[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
@@ -172,6 +192,17 @@ export default function App() {
           await offlineDB.saveCategorias(DEFAULT_CATEGORIAS);
         }
 
+        // Fetch configuration from local Express server on mount
+        try {
+          const res = await fetch(getApiUrl('/api/config'));
+          if (res.ok) {
+            const data = await res.json();
+            setConfig(data);
+          }
+        } catch (err) {
+          console.warn('Erro ao carregar configuração do servidor:', err);
+        }
+
         // Check for unsynced queue length on mount
         const unsynced = await offlineDB.getPendingOrders();
         setPendingCount(unsynced.length);
@@ -220,7 +251,7 @@ export default function App() {
           setOrders(mappedOrders);
         }
       } else {
-        const res = await fetch('/api/orders');
+        const res = await fetch(getApiUrl('/api/orders'));
         if (res.ok) {
           const data = await res.json();
           setOrders(data);
@@ -231,11 +262,11 @@ export default function App() {
     }
   }, []);
 
-  // Periodic background status check fallback for mobile/tablet browsers
+  // Periodic background status check fallback for mobile/tablet browsers and admin dashboard
   useEffect(() => {
-    if (activeView !== 'orders_status') return;
+    if (activeView !== 'orders_status' && activeView !== 'admin') return;
 
-    // Fetch immediately when entering Meus Pedidos
+    // Fetch immediately when entering Meus Pedidos or Admin Panel
     fetchOrders();
 
     // Set up a 3-second interval for constant real-time delivery progress updates
@@ -286,6 +317,43 @@ export default function App() {
             })));
           }
 
+          // Fetch config from Supabase config_estabelecimento
+          try {
+            const { data: configSupabase, error: configErr } = await realSupabase.from('config_estabelecimento').select('*').eq('id', 1).maybeSingle();
+            if (configSupabase) {
+              const mappedConfig = {
+                nome: configSupabase.nome,
+                logo: configSupabase.logo,
+                telefone: configSupabase.telefone,
+                endereco: configSupabase.endereco,
+                taxa_servico: parseFloat(configSupabase.taxa_servico),
+                mensagem_inicial: configSupabase.mensagem_inicial,
+                horario_funcionamento: configSupabase.horario_funcionamento
+              };
+              setConfig(mappedConfig);
+              // sync to local server backend
+              await fetch(getApiUrl('/api/config'), {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mappedConfig)
+              });
+            } else if (!configErr) {
+              // Row does not exist yet on Supabase, so seed it with current config!
+              await realSupabase.from('config_estabelecimento').insert({
+                id: 1,
+                nome: config.nome,
+                logo: config.logo,
+                telefone: config.telefone,
+                endereco: config.endereco,
+                taxa_servico: config.taxa_servico,
+                mensagem_inicial: config.mensagem_inicial,
+                horario_funcionamento: config.horario_funcionamento
+              });
+            }
+          } catch (configErr) {
+            console.warn('Erro ao obter configurações do Supabase:', configErr);
+          }
+
           await fetchOrders();
         } catch (err) {
           console.error('Supabase fetch error:', err);
@@ -325,15 +393,34 @@ export default function App() {
         })
         .subscribe();
 
+      const configSub = realSupabase
+        .channel('public:config_estabelecimento')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'config_estabelecimento' }, (payload: any) => {
+          if (payload.new && payload.new.id === 1) {
+            const mappedConfig = {
+              nome: payload.new.nome,
+              logo: payload.new.logo,
+              telefone: payload.new.telefone,
+              endereco: payload.new.endereco,
+              taxa_servico: parseFloat(payload.new.taxa_servico),
+              mensagem_inicial: payload.new.mensagem_inicial,
+              horario_funcionamento: payload.new.horario_funcionamento
+            };
+            setConfig(mappedConfig);
+          }
+        })
+        .subscribe();
+
       return () => {
         productsSub.unsubscribe();
         ordersSub.unsubscribe();
         clientsSub.unsubscribe();
+        configSub.unsubscribe();
       };
     } else {
       // Setup Server-Sent Events stream from the local Express server (unconfigured Supabase fallback)
       setSupabaseStatus('unconfigured');
-      const eventSource = new EventSource('/api/orders/stream');
+      const eventSource = new EventSource(getApiUrl('/api/orders/stream'));
 
       eventSource.onmessage = (event) => {
         try {
@@ -406,14 +493,14 @@ export default function App() {
             showToast(`Conta da mesa ${data.quiosque} (${data.cliente_nome}) foi fechada!`, 'success');
           } else if (data.type === 'product_created' || data.type === 'product_updated' || data.type === 'product_deleted') {
             // Refetch or update products
-            fetch('/api/products')
+            fetch(getApiUrl('/api/products'))
               .then((res) => res.json())
               .then((prods) => {
                 setProdutos(prods);
                 offlineDB.saveProdutos(prods);
               });
           } else if (data.type === 'category_created' || data.type === 'category_updated' || data.type === 'category_deleted') {
-            fetch('/api/categories')
+            fetch(getApiUrl('/api/categories'))
               .then((res) => res.json())
               .then((cats) => {
                 setCategorias(cats);
@@ -491,7 +578,7 @@ export default function App() {
 
         if (!syncedSuccessfully) {
           // Push to Express Server Mock Database
-          const res = await fetch('/api/orders', {
+          const res = await fetch(getApiUrl('/api/orders'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(order)
@@ -543,7 +630,7 @@ export default function App() {
       }
     } else {
       try {
-        await fetch('/api/clients', {
+        await fetch(getApiUrl('/api/clients'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome, quiosque, celular, telefone: celular })
@@ -700,7 +787,7 @@ export default function App() {
 
         if (!syncedSuccessfully) {
           // Express Post
-          const res = await fetch('/api/orders', {
+          const res = await fetch(getApiUrl('/api/orders'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newOrder)
@@ -743,7 +830,7 @@ export default function App() {
       }
     } else {
       try {
-        const res = await fetch(`/api/orders/${orderId}/status`, {
+        const res = await fetch(getApiUrl(`/api/orders/${orderId}/status`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ status: 'Cancelado' })
@@ -763,7 +850,7 @@ export default function App() {
   const handleCloseBill = async () => {
     if (!clienteNome || !clienteQuiosque) return;
     try {
-      const res = await fetch('/api/clients/close-bill', {
+      const res = await fetch(getApiUrl('/api/clients/close-bill'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ quiosque: clienteQuiosque, cliente_nome: clienteNome })
@@ -816,7 +903,7 @@ export default function App() {
       }
     } else {
       try {
-        const res = await fetch('/api/clients/pay-bill', {
+        const res = await fetch(getApiUrl('/api/clients/pay-bill'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quiosque, cliente_nome: cliNome })
@@ -900,7 +987,7 @@ export default function App() {
           }
         }
       } else {
-        const res = await fetch('/api/products', {
+        const res = await fetch(getApiUrl('/api/products'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(prod)
@@ -935,7 +1022,7 @@ export default function App() {
           return updated;
         });
       } else {
-        const res = await fetch(`/api/products/${id}`, {
+        const res = await fetch(getApiUrl(`/api/products/${id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(prod)
@@ -969,7 +1056,7 @@ export default function App() {
           return updated;
         });
       } else {
-        const res = await fetch(`/api/products/${id}`, { method: 'DELETE' });
+        const res = await fetch(getApiUrl(`/api/products/${id}`), { method: 'DELETE' });
         if (!res.ok) throw new Error('Falha ao remover produto no servidor');
         
         setProdutos((prev) => {
@@ -1007,7 +1094,7 @@ export default function App() {
           }
         }
       } else {
-        const res = await fetch('/api/categories', {
+        const res = await fetch(getApiUrl('/api/categories'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome })
@@ -1054,7 +1141,7 @@ export default function App() {
           });
         }
       } else {
-        const res = await fetch(`/api/categories/${id}`, {
+        const res = await fetch(getApiUrl(`/api/categories/${id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ nome })
@@ -1110,7 +1197,7 @@ export default function App() {
           return updated;
         });
       } else {
-        const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+        const res = await fetch(getApiUrl(`/api/categories/${id}`), { method: 'DELETE' });
         if (!res.ok) throw new Error('Falha ao remover categoria do servidor');
         
         setCategorias((prev) => {
@@ -1161,7 +1248,7 @@ export default function App() {
           }
         }
       } else {
-        const res = await fetch('/api/clients', {
+        const res = await fetch(getApiUrl('/api/clients'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(clientData)
@@ -1199,7 +1286,7 @@ export default function App() {
         
         setClientes((prev) => prev.map((c) => (c.id === id ? { ...c, ...clientData } : c)));
       } else {
-        const res = await fetch(`/api/clients/${id}`, {
+        const res = await fetch(getApiUrl(`/api/clients/${id}`), {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(clientData)
@@ -1225,7 +1312,7 @@ export default function App() {
         
         setClientes((prev) => prev.filter((c) => c.id !== id));
       } else {
-        const res = await fetch(`/api/clients/${id}`, { method: 'DELETE' });
+        const res = await fetch(getApiUrl(`/api/clients/${id}`), { method: 'DELETE' });
         if (!res.ok) throw new Error('Falha ao remover cliente no servidor');
         
         setClientes((prev) => prev.filter((c) => c.id !== id));
@@ -1239,21 +1326,42 @@ export default function App() {
 
   const handleUpdateConfig = async (conf: ConfigEstabelecimento) => {
     try {
+      // 1. Update React state
+      setConfig(conf);
+
+      // 2. Always persist to local Express server
+      await fetch(getApiUrl('/api/config'), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(conf)
+      });
+
+      // 3. Persist to Supabase config_estabelecimento if connected
       const realSupabase = getSupabase();
       if (realSupabase && hasSupabaseConfig) {
-        // Since config is stored locally in preview mock on unconfigured, we just save to memory.
-        // For real Supabase, you'd have a config table.
-        setConfig(conf);
-      } else {
-        await fetch('/api/config', {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(conf)
-        });
+        const { error } = await realSupabase
+          .from('config_estabelecimento')
+          .upsert({
+            id: 1,
+            nome: conf.nome,
+            logo: conf.logo,
+            telefone: conf.telefone,
+            endereco: conf.endereco,
+            taxa_servico: conf.taxa_servico,
+            mensagem_inicial: conf.mensagem_inicial,
+            horario_funcionamento: conf.horario_funcionamento,
+            updated_at: new Date().toISOString()
+          }, { onConflict: 'id' });
+        
+        if (error) {
+          console.warn('Erro ao salvar no Supabase config_estabelecimento:', error);
+        }
       }
+
       showToast('Configurações salvas com sucesso.', 'success');
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to update config:', err);
+      showToast(`Erro ao atualizar configurações: ${err.message || err}`, 'error');
     }
   };
 

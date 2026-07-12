@@ -79,8 +79,12 @@ export function ClientIdentification({ config, onIdentify, onEnterAdmin }: Clien
         className="w-full max-w-md bg-white border border-[#E3DCD2] rounded-[32px] p-8 shadow-xl relative z-10"
       >
          <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-[24px] bg-[#F4EFE6] border border-[#E3DCD2] mb-4 text-4xl shadow-sm">
-            {config.logo || '🥥'}
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-[24px] bg-[#F4EFE6] border border-[#E3DCD2] mb-4 text-4xl shadow-sm overflow-hidden">
+            {config.logo && (config.logo.startsWith('http') || config.logo.startsWith('data:image')) ? (
+              <img src={config.logo} alt="Logo" className="w-full h-full object-cover" />
+            ) : (
+              config.logo || '🥥'
+            )}
           </div>
           <span className="text-[10px] uppercase tracking-[0.2em] text-[#9C8E7B] font-bold block">Bem-vindo ao</span>
           <h1 className="text-3xl font-serif italic text-[#1E5E3A] mt-1 font-bold">

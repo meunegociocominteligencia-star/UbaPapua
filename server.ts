@@ -5,6 +5,7 @@
 
 import express from 'express';
 import path from 'path';
+import fs from 'fs';
 import { createServer as createViteServer } from 'vite';
 
 // Server-authoritative in-memory state (resets on server restart, synced on client IndexedDB)
@@ -409,6 +410,8 @@ let produtos = [
   }
 ];
 
+const CONFIG_FILE_PATH = path.join(process.cwd(), 'config.json');
+
 let config = {
   nome: 'Ubá Papuá',
   logo: '🌴',
@@ -418,6 +421,15 @@ let config = {
   mensagem_inicial: 'Bem-vindo ao Ubá Papuá! Saboreie o melhor da culinária regional e petiscos deliciosos à beira-rio. Faça seu pedido diretamente aqui!',
   horario_funcionamento: 'Terça a Domingo, das 11h às 22h'
 };
+
+if (fs.existsSync(CONFIG_FILE_PATH)) {
+  try {
+    const savedConfig = JSON.parse(fs.readFileSync(CONFIG_FILE_PATH, 'utf-8'));
+    config = { ...config, ...savedConfig };
+  } catch (err) {
+    console.error('Erro ao ler config.json:', err);
+  }
+}
 
 // Initial demo orders for gorgeous UI state
 let pedidos: any[] = [
@@ -613,6 +625,11 @@ async function startServer() {
 
   app.put('/api/config', (req, res) => {
     config = { ...config, ...req.body };
+    try {
+      fs.writeFileSync(CONFIG_FILE_PATH, JSON.stringify(config, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('Erro ao salvar config.json:', err);
+    }
     broadcastSSE({ type: 'config_updated', config });
     res.json(config);
   });

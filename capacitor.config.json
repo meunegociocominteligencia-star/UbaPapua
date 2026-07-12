@@ -1,0 +1,12 @@
+{
+  "appId": "com.ubapapua.cardapio",
+  "appName": "Ubá Papuá",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": [
+      "ais-pre-qbyy2na74rv3l2g37lryrb-559951806594.us-east1.run.app",
+      "*.run.app"
+    ]
+  }
+}

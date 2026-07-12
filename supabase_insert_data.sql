@@ -143,3 +143,30 @@ INSERT INTO produtos (nome, descricao, categoria, preco, imagem, ativo, ordem) V
   ('Cerveja Heineken Long Neck', 'Puro malte, estupidamente gelada.', 'Bebidas', 12.00, 'https://images.unsplash.com/photo-1608270586620-248524c67de9?w=600&auto=format&fit=crop&q=80', true, 37),
   ('Gin Tônica Tropical', 'Gin premium, água tônica, fatias de laranja e maracujá fresco.', 'Drinks', 28.00, 'https://images.unsplash.com/photo-1556679343-c7306c1976bc?w=600&auto=format&fit=crop&q=80', true, 38)
 ON CONFLICT DO NOTHING;
+
+
+-- 10. Criar tabela de Configurações do Estabelecimento
+CREATE TABLE IF NOT EXISTS config_estabelecimento (
+  id INT PRIMARY KEY,
+  nome VARCHAR(255) NOT NULL,
+  logo TEXT NOT NULL,
+  telefone VARCHAR(100),
+  endereco TEXT,
+  taxa_servico DECIMAL(10,2) DEFAULT 10.00,
+  mensagem_inicial TEXT,
+  horario_funcionamento VARCHAR(255),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ativar RLS para a tabela de configurações
+ALTER TABLE config_estabelecimento ENABLE ROW LEVEL SECURITY;
+
+-- Permitir acesso público de leitura e escrita
+DROP POLICY IF EXISTS "Acesso público config_estabelecimento" ON config_estabelecimento;
+CREATE POLICY "Acesso público config_estabelecimento" ON config_estabelecimento FOR ALL USING (true) WITH CHECK (true);
+
+-- Inserir as configurações iniciais se não existirem
+INSERT INTO config_estabelecimento (id, nome, logo, telefone, endereco, taxa_servico, mensagem_inicial, horario_funcionamento) VALUES
+  (1, 'Ubá Papuá', '🌴', '(91) 98765-4321', 'Orla de Belém, Quiosque Ubá Papuá - Belém/PA', 10, 'Bem-vindo ao Ubá Papuá! Saboreie o melhor da culinária regional e petiscos deliciosos à beira-rio. Faça seu pedido diretamente aqui!', 'Terça a Domingo, das 11h às 22h')
+ON CONFLICT (id) DO NOTHING;
+

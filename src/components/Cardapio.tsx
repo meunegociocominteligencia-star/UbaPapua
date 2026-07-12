@@ -57,8 +57,12 @@ export function Cardapio({
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-[#E3DCD2] px-4 py-3.5 shadow-sm">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-xl bg-[#F4EFE6] border border-[#E3DCD2] flex items-center justify-center text-xl shadow-sm">
-              {config.logo || '🥥'}
+            <div className="w-10 h-10 rounded-xl bg-[#F4EFE6] border border-[#E3DCD2] flex items-center justify-center text-xl shadow-sm overflow-hidden">
+              {config.logo && (config.logo.startsWith('http') || config.logo.startsWith('data:image')) ? (
+                <img src={config.logo} alt="Logo" className="w-full h-full object-cover" />
+              ) : (
+                config.logo || '🥥'
+              )}
             </div>
             <div className="flex flex-col">
               <span className="text-[9px] uppercase tracking-widest text-[#9C8E7B] font-black leading-none">Quiosque</span>
