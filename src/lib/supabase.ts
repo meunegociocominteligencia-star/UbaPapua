@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS clientes (
 -- Copiar dados da tabela antiga de forma condicional e segura se ela existir
 DO $$
 BEGIN
-  IF EXISTS (SELECT FROM information_tables WHERE table_name = 'clientes_old') THEN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'clientes_old' AND table_schema = 'public') THEN
     -- (rest copy check)
     NULL;
   END IF;

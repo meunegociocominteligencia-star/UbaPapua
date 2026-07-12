@@ -224,6 +224,22 @@ export function AdminPanel({
   const fetchTeamUsers = async () => {
     setIsLoadingUsers(true);
     try {
+      const realSupabase = getSupabase();
+      if (realSupabase && hasSupabaseConfig) {
+        const { data, error } = await realSupabase
+          .from('usuarios_admin')
+          .select('*')
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.warn('Supabase usuarios_admin load error (the table might be missing):', error);
+        } else if (data) {
+          setTeamUsers(data);
+          setIsLoadingUsers(false);
+          return;
+        }
+      }
+
       const res = await fetch(getApiUrl('/api/admin/users'));
       if (res.ok) {
         const data = await res.json();
@@ -248,6 +264,34 @@ export function AdminPanel({
     const pass = passwordInput;
 
     try {
+      const realSupabase = getSupabase();
+      if (realSupabase && hasSupabaseConfig) {
+        const { data, error } = await realSupabase
+          .from('usuarios_admin')
+          .select('*')
+          .eq('usuario', user)
+          .eq('senha', pass);
+
+        if (error) {
+          console.warn('Supabase login check error:', error);
+        } else if (data && data.length > 0) {
+          const logged = data[0];
+          setAdminUser(logged.regra);
+          setLoggedUser(logged);
+          try {
+            if (typeof window !== 'undefined' && window.localStorage) {
+              window.localStorage.setItem('admin_role', logged.regra);
+              window.localStorage.setItem('logged_user', JSON.stringify(logged));
+            }
+          } catch {}
+          setLoginError('');
+          if (logged.regra === 'garcom') {
+            setActiveTab('orders');
+          }
+          return;
+        }
+      }
+
       const res = await fetch(getApiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -272,7 +316,7 @@ export function AdminPanel({
         }
       }
     } catch (err) {
-      console.warn('Backend login error, falling back to local verification.', err);
+      console.warn('Backend login error, checking fallback.', err);
     }
 
     // Fallback Local Simulation
@@ -329,6 +373,45 @@ export function AdminPanel({
       return;
     }
 
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        const { data: existing, error: checkError } = await realSupabase
+          .from('usuarios_admin')
+          .select('id')
+          .eq('usuario', userForm.usuario.trim().toLowerCase());
+        
+        if (checkError) throw checkError;
+        if (existing && existing.length > 0) {
+          alert('Este nome de usuário já está cadastrado.');
+          return;
+        }
+
+        const newUser = {
+          nome: userForm.nome.trim(),
+          usuario: userForm.usuario.trim().toLowerCase(),
+          senha: userForm.senha.trim(),
+          regra: userForm.regra,
+          created_at: new Date().toISOString()
+        };
+
+        const { error: insertError } = await realSupabase
+          .from('usuarios_admin')
+          .insert(newUser);
+
+        if (insertError) throw insertError;
+
+        setUserForm({ nome: '', usuario: '', senha: '', regra: 'garcom' });
+        setIsAddingUser(false);
+        fetchTeamUsers();
+        return;
+      } catch (err) {
+        console.error('Error creating user on Supabase:', err);
+        alert('Erro ao cadastrar usuário no banco de dados. Verifique a tabela usuarios_admin.');
+        return;
+      }
+    }
+
     try {
       const res = await fetch(getApiUrl('/api/admin/users'), {
         method: 'POST',
@@ -357,6 +440,43 @@ export function AdminPanel({
       return;
     }
 
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        const { data: existing, error: checkError } = await realSupabase
+          .from('usuarios_admin')
+          .select('id')
+          .eq('usuario', editingUser.usuario.trim().toLowerCase())
+          .neq('id', editingUser.id);
+
+        if (checkError) throw checkError;
+        if (existing && existing.length > 0) {
+          alert('Este nome de usuário já está cadastrado.');
+          return;
+        }
+
+        const { error: updateError } = await realSupabase
+          .from('usuarios_admin')
+          .update({
+            nome: editingUser.nome.trim(),
+            usuario: editingUser.usuario.trim().toLowerCase(),
+            senha: editingUser.senha,
+            regra: editingUser.regra
+          })
+          .eq('id', editingUser.id);
+
+        if (updateError) throw updateError;
+
+        setEditingUser(null);
+        fetchTeamUsers();
+        return;
+      } catch (err) {
+        console.error('Error updating user on Supabase:', err);
+        alert('Erro ao atualizar usuário no banco de dados.');
+        return;
+      }
+    }
+
     try {
       const res = await fetch(getApiUrl(`/api/admin/users/${editingUser.id}`), {
         method: 'PUT',
@@ -382,6 +502,24 @@ export function AdminPanel({
       return;
     }
     if (!confirm('Deseja realmente remover este usuário da equipe?')) return;
+
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        const { error } = await realSupabase
+          .from('usuarios_admin')
+          .delete()
+          .eq('id', id);
+
+        if (error) throw error;
+        fetchTeamUsers();
+        return;
+      } catch (err) {
+        console.error('Error deleting user on Supabase:', err);
+        alert('Erro ao excluir usuário no banco de dados.');
+        return;
+      }
+    }
 
     try {
       const res = await fetch(getApiUrl(`/api/admin/users/${id}`), {

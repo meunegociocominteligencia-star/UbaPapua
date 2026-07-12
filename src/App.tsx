@@ -1035,30 +1035,34 @@ export default function App() {
         }
 
         // 2. Update client status to 'Conta Paga'
-        if (client && (client.telefone || client.celular)) {
-          await realSupabase
-            .from('clientes')
-            .update({ 
-              status_conta: 'Conta Paga', 
-              valor_total_conta: 0 
-            })
-            .eq('telefone', client.telefone || client.celular);
-        } else {
-          await realSupabase
-            .from('clientes')
-            .update({ 
-              status_conta: 'Conta Paga', 
-              valor_total_conta: 0 
-            })
-            .eq('nome', cliNome)
-            .eq('quiosque', quiosque);
+        try {
+          if (client && (client.telefone || client.celular)) {
+            await realSupabase
+              .from('clientes')
+              .update({ 
+                status_conta: 'Conta Paga', 
+                valor_total_conta: 0 
+              })
+              .eq('telefone', client.telefone || client.celular);
+          } else {
+            await realSupabase
+              .from('clientes')
+              .update({ 
+                status_conta: 'Conta Paga', 
+                valor_total_conta: 0 
+              })
+              .eq('nome', cliNome)
+              .eq('quiosque', quiosque);
+          }
+        } catch (clientErr) {
+          console.warn('Could not update status_conta/valor_total_conta in clientes table (likely columns missing):', clientErr);
         }
 
         showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
         await Promise.all([fetchOrders(), fetchClientes()]);
       } catch (err) {
         console.error('Error paying bill on Supabase:', err);
-        showToast('Erro ao finalizar conta no servidor.', 'error');
+        showToast('Erro ao finalizar conta. Verifique se as novas colunas e tabelas foram criadas no Supabase SQL Editor.', 'error');
       }
     } else {
       try {
