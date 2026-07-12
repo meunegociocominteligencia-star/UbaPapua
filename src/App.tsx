@@ -849,15 +849,58 @@ export default function App() {
 
   const handleCloseBill = async () => {
     if (!clienteNome || !clienteQuiosque) return;
-    try {
-      const res = await fetch(getApiUrl('/api/clients/close-bill'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quiosque: clienteQuiosque, cliente_nome: clienteNome })
-      });
-      if (res.ok) {
+
+    // Calculate total bill amount from the client's non-cancelled orders
+    const clientActiveOrders = orders.filter(o => 
+      o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
+      o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
+      o.status !== 'Cancelado'
+    );
+    const totalBillAmount = clientActiveOrders.reduce((sum, o) => sum + o.valor_final, 0);
+
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        // 1. Update orders in Supabase
+        const { data: activeOrdersDb } = await realSupabase
+          .from('pedidos')
+          .select('id')
+          .eq('quiosque', clienteQuiosque)
+          .eq('cliente_nome', clienteNome)
+          .neq('status', 'Cancelado');
+
+        if (activeOrdersDb && activeOrdersDb.length > 0) {
+          const ids = activeOrdersDb.map(o => o.id);
+          await realSupabase
+            .from('pedidos')
+            .update({ conta_solicitada: true })
+            .in('id', ids);
+        }
+
+        // 2. Update client status in Supabase
+        const clientCel = safeStorage.getItem('cliente_celular') || '';
+        if (clientCel) {
+          await realSupabase
+            .from('clientes')
+            .update({ 
+              status_conta: 'Conta em Aberto', 
+              valor_total_conta: totalBillAmount 
+            })
+            .eq('telefone', clientCel);
+        } else {
+          await realSupabase
+            .from('clientes')
+            .update({ 
+              status_conta: 'Conta em Aberto', 
+              valor_total_conta: totalBillAmount 
+            })
+            .eq('nome', clienteNome)
+            .eq('quiosque', clienteQuiosque);
+        }
+
         showToast('Sua solicitação de fechamento de conta foi enviada ao garçom!', 'success');
-        // Also update local orders list immediately to have conta_solicitada
+        
+        // Update local React state immediately
         setOrders(prev =>
           prev.map(o => {
             if (
@@ -870,12 +913,39 @@ export default function App() {
             return o;
           })
         );
-      } else {
+        fetchOrders();
+      } catch (err) {
+        console.error('Error closing bill on Supabase:', err);
         showToast('Erro ao solicitar fechamento de conta.', 'error');
       }
-    } catch (err) {
-      console.error('Error requesting bill locally:', err);
-      showToast('Erro ao solicitar fechamento de conta.', 'error');
+    } else {
+      try {
+        const res = await fetch(getApiUrl('/api/clients/close-bill'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quiosque: clienteQuiosque, cliente_nome: clienteNome })
+        });
+        if (res.ok) {
+          showToast('Sua solicitação de fechamento de conta foi enviada ao garçom!', 'success');
+          setOrders(prev =>
+            prev.map(o => {
+              if (
+                o.quiosque.toLowerCase() === clienteQuiosque.toLowerCase() &&
+                o.cliente_nome.toLowerCase() === clienteNome.toLowerCase() &&
+                o.status !== 'Cancelado'
+              ) {
+                return { ...o, conta_solicitada: true };
+              }
+              return o;
+            })
+          );
+        } else {
+          showToast('Erro ao solicitar fechamento de conta.', 'error');
+        }
+      } catch (err) {
+        console.error('Error requesting bill locally:', err);
+        showToast('Erro ao solicitar fechamento de conta.', 'error');
+      }
     }
   };
 
@@ -883,6 +953,7 @@ export default function App() {
     const realSupabase = getSupabase();
     if (realSupabase && hasSupabaseConfig) {
       try {
+        // 1. Update orders to 'Entregue' and false conta_solicitada
         const { data: activeOrders } = await realSupabase
           .from('pedidos')
           .select('id')
@@ -893,9 +964,20 @@ export default function App() {
           const ids = activeOrders.map(o => o.id);
           await realSupabase
             .from('pedidos')
-            .update({ status: 'Entregue' })
+            .update({ status: 'Entregue', conta_solicitada: false })
             .in('id', ids);
         }
+
+        // 2. Update client status to 'Conta Paga'
+        await realSupabase
+          .from('clientes')
+          .update({ 
+            status_conta: 'Conta Paga', 
+            valor_total_conta: 0 
+          })
+          .eq('nome', cliNome)
+          .eq('quiosque', quiosque);
+
         showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
         fetchOrders();
       } catch (err) {

@@ -466,8 +466,8 @@ let pedidos: any[] = [
 
 // Registered Clients in-memory state
 let clientes: any[] = [
-  { id: 'c-demo-1', nome: 'Mariana Silva', quiosque: 'Mesa 05', celular: '(91) 98888-7777', telefone: '(91) 98888-7777', created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
-  { id: 'c-demo-2', nome: 'Carlos Eduardo', quiosque: 'Espreguiçadeira 12', celular: '(91) 97777-6666', telefone: '(91) 97777-6666', created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() }
+  { id: 'c-demo-1', nome: 'Mariana Silva', quiosque: 'Mesa 05', celular: '(91) 98888-7777', telefone: '(91) 98888-7777', status_conta: 'Conta Paga', valor_total_conta: 0.00, created_at: new Date(Date.now() - 1000 * 60 * 15).toISOString() },
+  { id: 'c-demo-2', nome: 'Carlos Eduardo', quiosque: 'Espreguiçadeira 12', celular: '(91) 97777-6666', telefone: '(91) 97777-6666', status_conta: 'Conta Paga', valor_total_conta: 0.00, created_at: new Date(Date.now() - 1000 * 60 * 5).toISOString() }
 ];
 
 // Admin and Waiter users in-memory state
@@ -710,12 +710,19 @@ async function startServer() {
         quiosque: quiosqueVal,
         celular: telefoneVal,
         telefone: telefoneVal,
+        status_conta: 'Conta Paga',
+        valor_total_conta: 0.00,
         created_at: req.body.created_at || new Date().toISOString()
       };
 
       if (existingIndex !== -1) {
-        // Update existing client table or name session
-        clientes[existingIndex] = { ...clientes[existingIndex], ...newClient };
+        // Update existing client table or name session preserving status and total if present
+        clientes[existingIndex] = { 
+          status_conta: 'Conta Paga',
+          valor_total_conta: 0.00,
+          ...clientes[existingIndex], 
+          ...newClient 
+        };
         broadcastSSE({ type: 'client_updated', client: clientes[existingIndex] });
         res.status(200).json(clientes[existingIndex]);
       } else {
@@ -755,15 +762,39 @@ async function startServer() {
   app.post('/api/clients/close-bill', (req, res) => {
     const { quiosque, cliente_nome } = req.body;
     let count = 0;
+    let totalBill = 0;
     pedidos.forEach(p => {
       if (p.quiosque.toLowerCase() === quiosque.toLowerCase() && p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase() && p.status !== 'Cancelado') {
         p.conta_solicitada = true;
+        totalBill += p.valor_final;
         count++;
       }
     });
+
+    // Update in-memory client
+    const cliIndex = clientes.findIndex(c => c.quiosque.toLowerCase() === quiosque.toLowerCase() && c.nome.toLowerCase() === cliente_nome.toLowerCase());
+    if (cliIndex !== -1) {
+      clientes[cliIndex].status_conta = 'Conta em Aberto';
+      clientes[cliIndex].valor_total_conta = totalBill;
+      broadcastSSE({ type: 'client_updated', client: clientes[cliIndex] });
+    } else {
+      // Create a client if they aren't registered yet
+      const newClient = {
+        id: 'c_' + Math.random().toString(36).substr(2, 9),
+        nome: cliente_nome,
+        quiosque: quiosque,
+        celular: '',
+        telefone: '',
+        status_conta: 'Conta em Aberto',
+        valor_total_conta: totalBill,
+        created_at: new Date().toISOString()
+      };
+      clientes.unshift(newClient);
+      broadcastSSE({ type: 'client_created', client: newClient });
+    }
     
-    broadcastSSE({ type: 'bill_requested', quiosque, cliente_nome, pedidos });
-    res.json({ success: true, count });
+    broadcastSSE({ type: 'bill_requested', quiosque, cliente_nome, pedidos, clientes });
+    res.json({ success: true, count, total: totalBill });
   });
 
   app.post('/api/clients/pay-bill', (req, res) => {
@@ -774,7 +805,16 @@ async function startServer() {
         p.conta_solicitada = false;
       }
     });
-    broadcastSSE({ type: 'bill_paid', quiosque, cliente_nome, pedidos });
+
+    // Update in-memory client
+    const cliIndex = clientes.findIndex(c => c.quiosque.toLowerCase() === quiosque.toLowerCase() && c.nome.toLowerCase() === cliente_nome.toLowerCase());
+    if (cliIndex !== -1) {
+      clientes[cliIndex].status_conta = 'Conta Paga';
+      clientes[cliIndex].valor_total_conta = 0.00;
+      broadcastSSE({ type: 'client_updated', client: clientes[cliIndex] });
+    }
+
+    broadcastSSE({ type: 'bill_paid', quiosque, cliente_nome, pedidos, clientes });
     res.json({ success: true });
   });
 

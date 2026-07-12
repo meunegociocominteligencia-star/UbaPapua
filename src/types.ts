@@ -28,6 +28,8 @@ export interface Cliente {
   celular?: string;
   telefone?: string;
   created_at?: string;
+  status_conta?: 'Conta em Aberto' | 'Conta Paga';
+  valor_total_conta?: number;
 }
 
 export type OrderStatus = 'Recebido' | 'Em preparo' | 'Pronto' | 'Entregue' | 'Cancelado';

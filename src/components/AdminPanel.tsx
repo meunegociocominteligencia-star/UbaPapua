@@ -1376,6 +1376,9 @@ export function AdminPanel({
                           <th className="p-4">Mesa / Quiosque</th>
                           <th className="p-4">Celular / WhatsApp</th>
                           <th className="p-4">Data de Cadastro</th>
+                          <th className="p-4">Status da Conta</th>
+                          <th className="p-4">Total Consumido</th>
+                          <th className="p-4 text-right">Ações</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[#E3DCD2]/50">
@@ -1403,6 +1406,34 @@ export function AdminPanel({
                             </td>
                             <td className="p-4 text-[#706558]">
                               {client.created_at ? new Date(client.created_at).toLocaleString() : 'N/A'}
+                            </td>
+                            <td className="p-4">
+                              <span
+                                className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                                  client.status_conta === 'Conta em Aberto'
+                                    ? 'bg-amber-100 border border-amber-300 text-amber-800 animate-pulse'
+                                    : 'bg-green-100 border border-green-300 text-green-800'
+                                }`}
+                              >
+                                {client.status_conta || 'Conta Paga'}
+                              </span>
+                            </td>
+                            <td className="p-4 font-bold text-[#1E5E3A]">
+                              R$ {(client.valor_total_conta || 0).toFixed(2)}
+                            </td>
+                            <td className="p-4 text-right">
+                              {client.status_conta === 'Conta em Aberto' && onPayBill && (
+                                <button
+                                  onClick={() => {
+                                    if (window.confirm(`Confirmar recebimento do pagamento de R$ ${(client.valor_total_conta || 0).toFixed(2)} de ${client.nome}?`)) {
+                                      onPayBill(client.quiosque, client.nome);
+                                    }
+                                  }}
+                                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-amber-100"
+                                >
+                                  Receber
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -2279,6 +2310,8 @@ export function AdminPanel({
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Mesa / Local</th>
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Celular / Telefone</th>
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Cadastro</th>
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Status da Conta</th>
+                          <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Total da Conta</th>
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-right">Ações</th>
                         </tr>
                       </thead>
@@ -2310,8 +2343,35 @@ export function AdminPanel({
                               <td className="py-3.5 text-[10px] text-center text-[#706558] font-semibold">
                                 {cli.created_at ? new Date(cli.created_at).toLocaleDateString([], { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
                               </td>
+                              <td className="py-3.5 text-xs text-center font-bold">
+                                <span
+                                  className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${
+                                    cli.status_conta === 'Conta em Aberto'
+                                      ? 'bg-amber-100 border border-amber-300 text-amber-800 animate-pulse'
+                                      : 'bg-green-100 border border-green-300 text-green-800'
+                                  }`}
+                                >
+                                  {cli.status_conta || 'Conta Paga'}
+                                </span>
+                              </td>
+                              <td className="py-3.5 text-xs text-center font-bold text-[#1E5E3A]">
+                                R$ {(cli.valor_total_conta || 0).toFixed(2)}
+                              </td>
                               <td className="py-3.5 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
+                                  {cli.status_conta === 'Conta em Aberto' && onPayBill && (
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Deseja dar baixa na conta de R$ ${(cli.valor_total_conta || 0).toFixed(2)} de ${cli.nome}?`)) {
+                                          onPayBill(cli.quiosque, cli.nome);
+                                        }
+                                      }}
+                                      className="p-1.5 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white rounded-lg cursor-pointer transition-all flex items-center gap-1 font-extrabold text-[9px] px-2.5 shadow-sm shadow-amber-100"
+                                      title="Dar baixa na conta (Pagar)"
+                                    >
+                                      <Check className="h-3 w-3 stroke-[3]" /> Receber
+                                    </button>
+                                  )}
                                   {whatsappUrl && (
                                     <a
                                       href={whatsappUrl}
