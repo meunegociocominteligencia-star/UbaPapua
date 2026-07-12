@@ -264,20 +264,54 @@ export default function App() {
     }
   }, []);
 
+  // Fetch clients from either Supabase or local server (REST fallback)
+  const fetchClientes = useCallback(async () => {
+    try {
+      const realSupabase = getSupabase();
+      if (realSupabase && hasSupabaseConfig) {
+        const { data: clientData, error } = await realSupabase
+          .from('clientes')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        if (clientData) {
+          setClientes(clientData.map((c: any) => ({
+            id: c.telefone || c.celular || 'c_' + Math.random().toString(36).substr(2, 9),
+            ...c
+          })));
+        }
+      } else {
+        const res = await fetch(getApiUrl('/api/clients'));
+        if (res.ok) {
+          const data = await res.json();
+          setClientes(data);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching clients:', err);
+    }
+  }, []);
+
   // Periodic background status check fallback for mobile/tablet browsers and admin dashboard
   useEffect(() => {
     if (activeView !== 'orders_status' && activeView !== 'admin') return;
 
     // Fetch immediately when entering Meus Pedidos or Admin Panel
     fetchOrders();
+    if (activeView === 'admin') {
+      fetchClientes();
+    }
 
     // Set up a 3-second interval for constant real-time delivery progress updates
     const interval = setInterval(() => {
       fetchOrders();
+      if (activeView === 'admin') {
+        fetchClientes();
+      }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [activeView, fetchOrders]);
+  }, [activeView, fetchOrders, fetchClientes]);
 
   // real-time data sync handler (SSE or Supabase Realtime)
   useEffect(() => {
@@ -1731,6 +1765,9 @@ export default function App() {
               onAddClient={handleAddClient}
               onUpdateClient={handleUpdateClient}
               onDeleteClient={handleDeleteClient}
+              onRefreshData={async () => {
+                await Promise.all([fetchOrders(), fetchClientes()]);
+              }}
               supabaseStatus={supabaseStatus}
               onClose={() => {
                 if (clienteNome) {

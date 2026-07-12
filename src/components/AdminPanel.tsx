@@ -17,6 +17,7 @@ import {
   Database,
   Coffee,
   Check,
+  RefreshCw,
   X,
   FileCode,
   ArrowLeft,
@@ -74,6 +75,7 @@ interface AdminPanelProps {
   onAddClient?: (cli: Omit<Cliente, 'id'>) => void;
   onUpdateClient?: (id: string, cli: Partial<Cliente>) => void;
   onDeleteClient?: (id: string) => void;
+  onRefreshData?: () => Promise<void>;
   onClose: () => void;
   supabaseStatus: 'connected' | 'disconnected' | 'unconfigured';
 }
@@ -97,10 +99,12 @@ export function AdminPanel({
   onAddClient,
   onUpdateClient,
   onDeleteClient,
+  onRefreshData,
   onClose,
   supabaseStatus
 }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<'orders' | 'products' | 'categories' | 'settings' | 'supabase' | 'reports' | 'clientes' | 'team'>('orders');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Helper to dynamically calculate total consumed by a client from unpaid orders
   const getClientTotalConsumed = (client: Cliente) => {
@@ -139,27 +143,38 @@ export function AdminPanel({
 
   // Helper to dynamically get client status
   const getClientStatus = (client: Cliente) => {
-    if (client.status_conta === 'Conta em Aberto') {
-      return 'Conta em Aberto';
-    }
-    
-    const hasRequested = orders.some(order => {
+    const matchingOrders = orders.filter(order => {
       const clientPhone = (client.celular || client.telefone || '').replace(/\D/g, '');
       const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
-      const phoneMatches = clientPhone && orderPhone && clientPhone === orderPhone;
+      if (clientPhone && orderPhone && clientPhone === orderPhone) {
+        return true;
+      }
       
-      const orderKiosk = (order.quiosque || '').trim().toLowerCase();
-      const clientKiosk = (client.quiosque || '').trim().toLowerCase();
       const orderName = (order.cliente_nome || '').trim().toLowerCase();
       const clientName = (client.nome || '').trim().toLowerCase();
-      const orderFirstName = orderName.split(' ')[0];
-      const clientFirstName = clientName.split(' ')[0];
-      const nameKioskMatches = orderKiosk === clientKiosk && (orderName === clientName || (orderFirstName && clientFirstName && orderFirstName === clientFirstName));
-
-      return (phoneMatches || nameKioskMatches) && order.status !== 'Cancelado' && !order.pago && order.conta_solicitada;
+      const orderKiosk = (order.quiosque || '').trim().toLowerCase();
+      const clientKiosk = (client.quiosque || '').trim().toLowerCase();
+      
+      if (orderKiosk === clientKiosk) {
+        if (orderName === clientName) return true;
+        const orderFirstName = orderName.split(' ')[0];
+        const clientFirstName = clientName.split(' ')[0];
+        if (orderFirstName && clientFirstName && orderFirstName === clientFirstName) {
+          return true;
+        }
+      }
+      return false;
     });
 
-    return hasRequested ? 'Conta em Aberto' : (client.status_conta || 'Conta Paga');
+    const activeOrders = matchingOrders.filter(o => o.status !== 'Cancelado' && !o.pago);
+
+    if (activeOrders.length === 0) {
+      return 'Conta Paga';
+    }
+
+    const hasRequested = activeOrders.some(order => order.conta_solicitada);
+
+    return hasRequested ? 'Aguardando confirmação de Pagamento' : 'Conta em Aberto';
   };
   
   // Administrative & Waiter Session Auth State
@@ -1416,6 +1431,25 @@ export function AdminPanel({
                   <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Clientes Cadastrados</h2>
                   <p className="text-xs text-[#706558]">Lista de todos os clientes identificados e registrados no banco de dados</p>
                 </div>
+                {onRefreshData && (
+                  <button
+                    onClick={async () => {
+                      setIsRefreshing(true);
+                      try {
+                        await onRefreshData();
+                      } catch (err) {
+                        console.error('Failed to manually reload data:', err);
+                      } finally {
+                        setTimeout(() => setIsRefreshing(false), 600);
+                      }
+                    }}
+                    disabled={isRefreshing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] border border-[#E3DCD2] rounded-xl text-[#1B3322] font-bold text-xs transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-[#1E5E3A]' : ''}`} />
+                    <span>Recarregar Dados</span>
+                  </button>
+                )}
               </div>
 
               {clientes.length === 0 ? (
@@ -1470,8 +1504,10 @@ export function AdminPanel({
                             <td className="p-4">
                               <span
                                 className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
-                                  getClientStatus(client) === 'Conta em Aberto'
+                                  getClientStatus(client) === 'Aguardando confirmação de Pagamento'
                                     ? 'bg-amber-100 border border-amber-300 text-amber-800 animate-pulse'
+                                    : getClientStatus(client) === 'Conta em Aberto'
+                                    ? 'bg-sky-50 border border-sky-200 text-sky-700 font-bold'
                                     : 'bg-green-100 border border-green-300 text-green-800'
                                 }`}
                               >
@@ -1482,17 +1518,33 @@ export function AdminPanel({
                               R$ {getClientTotalConsumed(client).toFixed(2)}
                             </td>
                             <td className="p-4 text-right">
-                              {getClientStatus(client) === 'Conta em Aberto' && onPayBill && (
-                                <button
-                                  onClick={() => {
-                                    if (window.confirm(`Confirmar recebimento do pagamento de R$ ${getClientTotalConsumed(client).toFixed(2)} de ${client.nome}?`)) {
-                                      onPayBill(client.quiosque, client.nome);
-                                    }
-                                  }}
-                                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-amber-100"
-                                >
-                                  Receber
-                                </button>
+                              {onPayBill && (
+                                <div className="flex justify-end gap-1.5">
+                                  {getClientStatus(client) === 'Aguardando confirmação de Pagamento' && (
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Confirmar recebimento do pagamento de R$ ${getClientTotalConsumed(client).toFixed(2)} de ${client.nome}?`)) {
+                                          onPayBill(client.quiosque, client.nome);
+                                        }
+                                      }}
+                                      className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-amber-100"
+                                    >
+                                      Confirmar Pagamento
+                                    </button>
+                                  )}
+                                  {getClientStatus(client) === 'Conta em Aberto' && (
+                                    <button
+                                      onClick={() => {
+                                        if (window.confirm(`Deseja dar baixa na conta de R$ ${getClientTotalConsumed(client).toFixed(2)} de ${client.nome} mesmo sem a solicitação do cliente?`)) {
+                                          onPayBill(client.quiosque, client.nome);
+                                        }
+                                      }}
+                                      className="bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-[9px] px-2.5 py-1.5 rounded-lg uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-sky-100"
+                                    >
+                                      Baixar Conta
+                                    </button>
+                                  )}
+                                </div>
                               )}
                             </td>
                           </tr>
@@ -2406,8 +2458,10 @@ export function AdminPanel({
                               <td className="py-3.5 text-xs text-center font-bold">
                                 <span
                                   className={`text-[9px] font-black px-2 py-1 rounded-full uppercase tracking-wider ${
-                                    getClientStatus(cli) === 'Conta em Aberto'
+                                    getClientStatus(cli) === 'Aguardando confirmação de Pagamento'
                                       ? 'bg-amber-100 border border-amber-300 text-amber-800 animate-pulse'
+                                      : getClientStatus(cli) === 'Conta em Aberto'
+                                      ? 'bg-sky-50 border border-sky-200 text-sky-700 font-bold'
                                       : 'bg-green-100 border border-green-300 text-green-800'
                                   }`}
                                 >
@@ -2419,18 +2473,35 @@ export function AdminPanel({
                               </td>
                               <td className="py-3.5 text-right">
                                 <div className="flex items-center justify-end gap-1.5">
-                                  {getClientStatus(cli) === 'Conta em Aberto' && onPayBill && (
-                                    <button
-                                      onClick={() => {
-                                        if (window.confirm(`Deseja dar baixa na conta de R$ ${getClientTotalConsumed(cli).toFixed(2)} de ${cli.nome}?`)) {
-                                          onPayBill(cli.quiosque, cli.nome);
-                                        }
-                                      }}
-                                      className="p-1.5 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white rounded-lg cursor-pointer transition-all flex items-center gap-1 font-extrabold text-[9px] px-2.5 shadow-sm shadow-amber-100"
-                                      title="Dar baixa na conta (Pagar)"
-                                    >
-                                      <Check className="h-3 w-3 stroke-[3]" /> Receber
-                                    </button>
+                                  {onPayBill && (
+                                    <>
+                                      {getClientStatus(cli) === 'Aguardando confirmação de Pagamento' && (
+                                        <button
+                                          onClick={() => {
+                                            if (window.confirm(`Confirmar recebimento do pagamento de R$ ${getClientTotalConsumed(cli).toFixed(2)} de ${cli.nome}?`)) {
+                                              onPayBill(cli.quiosque, cli.nome);
+                                            }
+                                          }}
+                                          className="p-1.5 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white rounded-lg cursor-pointer transition-all flex items-center gap-1 font-extrabold text-[9px] px-2.5 shadow-sm shadow-amber-100"
+                                          title="Confirmar Pagamento"
+                                        >
+                                          <Check className="h-3 w-3 stroke-[3]" /> Confirmar
+                                        </button>
+                                      )}
+                                      {getClientStatus(cli) === 'Conta em Aberto' && (
+                                        <button
+                                          onClick={() => {
+                                            if (window.confirm(`Deseja dar baixa na conta de R$ ${getClientTotalConsumed(cli).toFixed(2)} de ${cli.nome} mesmo sem a solicitação do cliente?`)) {
+                                              onPayBill(cli.quiosque, cli.nome);
+                                            }
+                                          }}
+                                          className="p-1.5 bg-sky-600 hover:bg-sky-700 border border-sky-700 text-white rounded-lg cursor-pointer transition-all flex items-center gap-1 font-extrabold text-[9px] px-2.5 shadow-sm shadow-sky-100"
+                                          title="Dar baixa na conta (Pagar)"
+                                        >
+                                          <Check className="h-3 w-3 stroke-[3]" /> Receber
+                                        </button>
+                                      )}
+                                    </>
                                   )}
                                   {whatsappUrl && (
                                     <a

@@ -32,11 +32,11 @@ jobs:
           NODE_ENV: production
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://ais-pre-qbyy2na74rv3l2g37lryrb-559951806594.us-east1.run.app' }}
 
-      - name: Set up Java JDK 17
+      - name: Set up Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
