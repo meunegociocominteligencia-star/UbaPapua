@@ -56,6 +56,11 @@ import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus, Cliente
 import { SUPABASE_SQL_SETUP, hasSupabaseConfig, getSupabase } from '../lib/supabase';
 import { getApiUrl } from '../lib/api';
 
+const normalizeString = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+};
+
 interface AdminPanelProps {
   orders: Pedido[];
   products: Produto[];
@@ -111,14 +116,18 @@ export function AdminPanel({
     const matchingOrders = orders.filter(order => {
       const clientPhone = (client.celular || client.telefone || '').replace(/\D/g, '');
       const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
-      if (clientPhone && orderPhone && clientPhone === orderPhone) {
-        return true;
+      if (clientPhone && orderPhone) {
+        if (clientPhone === orderPhone || 
+            clientPhone.endsWith(orderPhone) || 
+            orderPhone.endsWith(clientPhone)) {
+          return true;
+        }
       }
       
-      const orderName = (order.cliente_nome || '').trim().toLowerCase();
-      const clientName = (client.nome || '').trim().toLowerCase();
-      const orderKiosk = (order.quiosque || '').trim().toLowerCase();
-      const clientKiosk = (client.quiosque || '').trim().toLowerCase();
+      const orderName = normalizeString(order.cliente_nome);
+      const clientName = normalizeString(client.nome);
+      const orderKiosk = normalizeString(order.quiosque);
+      const clientKiosk = normalizeString(client.quiosque);
       
       if (orderKiosk === clientKiosk) {
         if (orderName === clientName) return true;
@@ -134,8 +143,12 @@ export function AdminPanel({
     const activeOrders = matchingOrders.filter(o => o.status !== 'Cancelado' && !o.pago);
     const ordersTotal = activeOrders.reduce((sum, o) => sum + o.valor_final, 0);
 
-    if (client.status_conta === 'Conta em Aberto') {
-      return client.valor_total_conta || ordersTotal;
+    const storedTotal = typeof client.valor_total_conta === 'string'
+      ? parseFloat(client.valor_total_conta)
+      : (client.valor_total_conta || 0);
+
+    if (client.status_conta === 'Conta em Aberto' && storedTotal > 0) {
+      return storedTotal;
     }
     
     return ordersTotal;
@@ -146,14 +159,18 @@ export function AdminPanel({
     const matchingOrders = orders.filter(order => {
       const clientPhone = (client.celular || client.telefone || '').replace(/\D/g, '');
       const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
-      if (clientPhone && orderPhone && clientPhone === orderPhone) {
-        return true;
+      if (clientPhone && orderPhone) {
+        if (clientPhone === orderPhone || 
+            clientPhone.endsWith(orderPhone) || 
+            orderPhone.endsWith(clientPhone)) {
+          return true;
+        }
       }
       
-      const orderName = (order.cliente_nome || '').trim().toLowerCase();
-      const clientName = (client.nome || '').trim().toLowerCase();
-      const orderKiosk = (order.quiosque || '').trim().toLowerCase();
-      const clientKiosk = (client.quiosque || '').trim().toLowerCase();
+      const orderName = normalizeString(order.cliente_nome);
+      const clientName = normalizeString(client.nome);
+      const orderKiosk = normalizeString(order.quiosque);
+      const clientKiosk = normalizeString(client.quiosque);
       
       if (orderKiosk === clientKiosk) {
         if (orderName === clientName) return true;
@@ -169,12 +186,12 @@ export function AdminPanel({
     const activeOrders = matchingOrders.filter(o => o.status !== 'Cancelado' && !o.pago);
 
     if (activeOrders.length === 0) {
-      return 'Conta Paga';
+      return client.status_conta || 'Conta Paga';
     }
 
     const hasRequested = activeOrders.some(order => order.conta_solicitada);
 
-    return hasRequested ? 'Aguardando confirmação de Pagamento' : 'Conta em Aberto';
+    return hasRequested ? 'Aguardando confirmação de Pagamento' : (client.status_conta || 'Conta em Aberto');
   };
   
   // Administrative & Waiter Session Auth State

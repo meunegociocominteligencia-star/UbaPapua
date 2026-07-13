@@ -759,14 +759,25 @@ async function startServer() {
     res.json({ success: true });
   });
 
+  const normalizeString = (str: string) => {
+    if (!str) return '';
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+  };
+
   app.post('/api/clients/close-bill', (req, res) => {
     const { quiosque, cliente_nome } = req.body;
     let count = 0;
     let totalBill = 0;
+    const normQuiosque = normalizeString(quiosque);
+    const normClientName = normalizeString(cliente_nome);
+
     pedidos.forEach(p => {
+      const orderKiosk = normalizeString(p.quiosque);
+      const orderName = normalizeString(p.cliente_nome);
+
       if (
-        p.quiosque.toLowerCase() === quiosque.toLowerCase() &&
-        p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase() &&
+        orderKiosk === normQuiosque &&
+        (orderName === normClientName || orderName.split(' ')[0] === normClientName.split(' ')[0]) &&
         p.status !== 'Cancelado' &&
         !p.pago
       ) {
@@ -777,9 +788,13 @@ async function startServer() {
     });
 
     // Update in-memory client
-    const cliIndex = clientes.findIndex(c => c.quiosque.toLowerCase() === quiosque.toLowerCase() && c.nome.toLowerCase() === cliente_nome.toLowerCase());
+    const cliIndex = clientes.findIndex(c => {
+      const k = normalizeString(c.quiosque);
+      const n = normalizeString(c.nome);
+      return k === normQuiosque && (n === normClientName || n.split(' ')[0] === normClientName.split(' ')[0]);
+    });
     if (cliIndex !== -1) {
-      clientes[cliIndex].status_conta = 'Conta em Aberto';
+      clientes[cliIndex].status_conta = 'Aguardando confirmação de Pagamento';
       clientes[cliIndex].valor_total_conta = totalBill;
       broadcastSSE({ type: 'client_updated', client: clientes[cliIndex] });
     } else {
@@ -790,7 +805,7 @@ async function startServer() {
         quiosque: quiosque,
         celular: '',
         telefone: '',
-        status_conta: 'Conta em Aberto',
+        status_conta: 'Aguardando confirmação de Pagamento',
         valor_total_conta: totalBill,
         created_at: new Date().toISOString()
       };
@@ -804,8 +819,17 @@ async function startServer() {
 
   app.post('/api/clients/pay-bill', (req, res) => {
     const { quiosque, cliente_nome } = req.body;
+    const normQuiosque = normalizeString(quiosque);
+    const normClientName = normalizeString(cliente_nome);
+
     pedidos.forEach(p => {
-      if (p.quiosque.toLowerCase() === quiosque.toLowerCase() && p.cliente_nome.toLowerCase() === cliente_nome.toLowerCase()) {
+      const orderKiosk = normalizeString(p.quiosque);
+      const orderName = normalizeString(p.cliente_nome);
+
+      if (
+        orderKiosk === normQuiosque &&
+        (orderName === normClientName || orderName.split(' ')[0] === normClientName.split(' ')[0])
+      ) {
         p.status = 'Entregue';
         p.conta_solicitada = false;
         p.pago = true;
@@ -813,7 +837,11 @@ async function startServer() {
     });
 
     // Update in-memory client
-    const cliIndex = clientes.findIndex(c => c.quiosque.toLowerCase() === quiosque.toLowerCase() && c.nome.toLowerCase() === cliente_nome.toLowerCase());
+    const cliIndex = clientes.findIndex(c => {
+      const k = normalizeString(c.quiosque);
+      const n = normalizeString(c.nome);
+      return k === normQuiosque && (n === normClientName || n.split(' ')[0] === normClientName.split(' ')[0]);
+    });
     if (cliIndex !== -1) {
       clientes[cliIndex].status_conta = 'Conta Paga';
       clientes[cliIndex].valor_total_conta = 0.00;

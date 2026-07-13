@@ -72,6 +72,11 @@ const safeStorage = {
   }
 };
 
+const normalizeString = (str: string) => {
+  if (!str) return '';
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
+};
+
 export default function App() {
   // Session / Router state
   const [clienteNome, setClienteNome] = useState<string | null>(
@@ -892,14 +897,18 @@ export default function App() {
       
       const orderPhone = (o.cliente_telefone || '').replace(/\D/g, '');
       const clientPhoneNormalized = clientCel.replace(/\D/g, '');
-      if (clientPhoneNormalized && orderPhone && clientPhoneNormalized === orderPhone) {
-        return true;
+      if (clientPhoneNormalized && orderPhone) {
+        if (clientPhoneNormalized === orderPhone || 
+            clientPhoneNormalized.endsWith(orderPhone) || 
+            orderPhone.endsWith(clientPhoneNormalized)) {
+          return true;
+        }
       }
 
-      const orderKiosk = (o.quiosque || '').trim().toLowerCase();
-      const clientKiosk = clienteQuiosque.trim().toLowerCase();
-      const orderName = (o.cliente_nome || '').trim().toLowerCase();
-      const clientName = clienteNome.trim().toLowerCase();
+      const orderKiosk = normalizeString(o.quiosque);
+      const clientKiosk = normalizeString(clienteQuiosque);
+      const orderName = normalizeString(o.cliente_nome);
+      const clientName = normalizeString(clienteNome);
 
       if (orderKiosk === clientKiosk) {
         if (orderName === clientName) return true;
@@ -931,7 +940,7 @@ export default function App() {
           await realSupabase
             .from('clientes')
             .update({ 
-              status_conta: 'Conta em Aberto', 
+              status_conta: 'Aguardando confirmação de Pagamento', 
               valor_total_conta: totalBillAmount 
             })
             .eq('telefone', clientCel);
@@ -939,7 +948,7 @@ export default function App() {
           await realSupabase
             .from('clientes')
             .update({ 
-              status_conta: 'Conta em Aberto', 
+              status_conta: 'Aguardando confirmação de Pagamento', 
               valor_total_conta: totalBillAmount 
             })
             .eq('nome', clienteNome)
@@ -973,33 +982,39 @@ export default function App() {
   };
 
   const handlePayBill = async (quiosque: string, cliNome: string) => {
+    const normQuiosque = normalizeString(quiosque);
+    const normCliNome = normalizeString(cliNome);
+
     // Find client in state
-    const client = clientes.find(c => 
-      c.quiosque.toLowerCase() === quiosque.toLowerCase() && 
-      c.nome.toLowerCase() === cliNome.toLowerCase()
-    );
+    const client = clientes.find(c => {
+      const k = normalizeString(c.quiosque);
+      const n = normalizeString(c.nome);
+      return k === normQuiosque && (n === normCliNome || n.split(' ')[0] === normCliNome.split(' ')[0]);
+    });
 
     const clientPhone = client ? (client.celular || client.telefone || '').replace(/\D/g, '') : '';
 
-    // Match order ids identically to getClientStatus
-    const matchingOrderIds = orders
+    // Calculate which order IDs in local memory match this client
+    const localMatchingOrderIds = orders
       .filter(order => {
         if (order.status === 'Cancelado' || order.pago) return false;
 
         const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
-        if (clientPhone && orderPhone && clientPhone === orderPhone) {
-          return true;
+        if (clientPhone && orderPhone) {
+          if (clientPhone === orderPhone || 
+              clientPhone.endsWith(orderPhone) || 
+              orderPhone.endsWith(clientPhone)) {
+            return true;
+          }
         }
 
-        const orderKiosk = (order.quiosque || '').trim().toLowerCase();
-        const clientKiosk = quiosque.trim().toLowerCase();
-        const orderName = (order.cliente_nome || '').trim().toLowerCase();
-        const clientName = cliNome.trim().toLowerCase();
+        const orderKiosk = normalizeString(order.quiosque);
+        const orderName = normalizeString(order.cliente_nome);
 
-        if (orderKiosk === clientKiosk) {
-          if (orderName === clientName) return true;
+        if (orderKiosk === normQuiosque) {
+          if (orderName === normCliNome) return true;
           const orderFirstName = orderName.split(' ')[0];
-          const clientFirstName = clientName.split(' ')[0];
+          const clientFirstName = normCliNome.split(' ')[0];
           if (orderFirstName && clientFirstName && orderFirstName === clientFirstName) {
             return true;
           }
@@ -1008,57 +1023,120 @@ export default function App() {
       })
       .map(o => o.id);
 
+    // OPTIMISTIC UPDATE: Update local React state immediately so UI updates instantly!
+    setOrders(prev => prev.map(o => {
+      const orderPhone = (o.cliente_telefone || '').replace(/\D/g, '');
+      const isPhoneMatch = clientPhone && orderPhone && (clientPhone === orderPhone || clientPhone.endsWith(orderPhone) || orderPhone.endsWith(clientPhone));
+      const orderKiosk = normalizeString(o.quiosque);
+      const orderName = normalizeString(o.cliente_nome);
+      const isNameAndKioskMatch = orderKiosk === normQuiosque && (
+        orderName === normCliNome || 
+        orderName.split(' ')[0] === normCliNome.split(' ')[0]
+      );
+      
+      if ((isPhoneMatch || isNameAndKioskMatch) && o.status !== 'Cancelado' && !o.pago) {
+        return { ...o, status: 'Entregue', conta_solicitada: false, pago: true };
+      }
+      return o;
+    }));
+
+    setClientes(prev => prev.map(c => {
+      const k = normalizeString(c.quiosque);
+      const n = normalizeString(c.nome);
+      if (k === normQuiosque && (n === normCliNome || n.split(' ')[0] === normCliNome.split(' ')[0])) {
+        return { ...c, status_conta: 'Conta Paga', valor_total_conta: 0 };
+      }
+      return c;
+    }));
+
     const realSupabase = getSupabase();
     if (realSupabase && hasSupabaseConfig) {
       try {
-        // 1. Update orders to 'Entregue' and false conta_solicitada, pago = true
-        if (matchingOrderIds.length > 0) {
-          await realSupabase
+        // 1. Gather all potentially matching active orders from the live database
+        const { data: dbOrders, error: dbOrdersErr } = await realSupabase
+          .from('pedidos')
+          .select('*')
+          .eq('pago', false);
+
+        if (dbOrdersErr) throw dbOrdersErr;
+
+        // Collect all IDs to update using local robust normalized checks
+        const ordersToUpdateIds: string[] = [...localMatchingOrderIds];
+        
+        if (dbOrders && dbOrders.length > 0) {
+          dbOrders.forEach(order => {
+            if (order.status === 'Cancelado') return;
+            
+            const orderPhone = (order.cliente_telefone || '').replace(/\D/g, '');
+            const isPhoneMatch = clientPhone && orderPhone && (clientPhone === orderPhone || clientPhone.endsWith(orderPhone) || orderPhone.endsWith(clientPhone));
+            const orderKiosk = normalizeString(order.quiosque);
+            const orderName = normalizeString(order.cliente_nome);
+            const isNameAndKioskMatch = orderKiosk === normQuiosque && (
+              orderName === normCliNome || 
+              orderName.split(' ')[0] === normCliNome.split(' ')[0]
+            );
+
+            if ((isPhoneMatch || isNameAndKioskMatch) && !ordersToUpdateIds.includes(order.id)) {
+              ordersToUpdateIds.push(order.id);
+            }
+          });
+        }
+
+        // Apply bulk update on all matched orders
+        if (ordersToUpdateIds.length > 0) {
+          const { error: orderUpdateErr } = await realSupabase
             .from('pedidos')
             .update({ status: 'Entregue', conta_solicitada: false, pago: true })
-            .in('id', matchingOrderIds);
-        } else {
-          // Fallback exact matching
-          const { data: activeOrders } = await realSupabase
-            .from('pedidos')
-            .select('id')
-            .eq('quiosque', quiosque)
-            .eq('cliente_nome', cliNome);
-            
-          if (activeOrders && activeOrders.length > 0) {
-            const ids = activeOrders.map(o => o.id);
-            await realSupabase
-              .from('pedidos')
-              .update({ status: 'Entregue', conta_solicitada: false, pago: true })
-              .in('id', ids);
+            .in('id', ordersToUpdateIds);
+          if (orderUpdateErr) throw orderUpdateErr;
+        }
+
+        // 2. Fetch all clients from the database to find the exact primary key match (or matching name/kiosk)
+        const { data: dbClients, error: dbClientsErr } = await realSupabase
+          .from('clientes')
+          .select('*');
+
+        if (dbClientsErr) throw dbClientsErr;
+
+        if (dbClients && dbClients.length > 0) {
+          const matchingDbClients = dbClients.filter(c => {
+            const k = normalizeString(c.quiosque);
+            const n = normalizeString(c.nome);
+            return k === normQuiosque && (n === normCliNome || n.split(' ')[0] === normCliNome.split(' ')[0]);
+          });
+
+          // Update each matched client
+          for (const dbCli of matchingDbClients) {
+            const { error: clientUpdateErr } = await realSupabase
+              .from('clientes')
+              .update({ 
+                status_conta: 'Conta Paga', 
+                valor_total_conta: 0 
+              })
+              .eq('telefone', dbCli.telefone);
+            if (clientUpdateErr) {
+              console.warn(`Could not update client status via telefone key ${dbCli.telefone}:`, clientUpdateErr);
+            }
           }
         }
 
-        // 2. Update client status to 'Conta Paga'
+        // Fallback updates to guarantee sync
         try {
           if (client && (client.telefone || client.celular)) {
             await realSupabase
               .from('clientes')
-              .update({ 
-                status_conta: 'Conta Paga', 
-                valor_total_conta: 0 
-              })
+              .update({ status_conta: 'Conta Paga', valor_total_conta: 0 })
               .eq('telefone', client.telefone || client.celular);
-          } else {
-            await realSupabase
-              .from('clientes')
-              .update({ 
-                status_conta: 'Conta Paga', 
-                valor_total_conta: 0 
-              })
-              .eq('nome', cliNome)
-              .eq('quiosque', quiosque);
           }
-        } catch (clientErr) {
-          console.warn('Could not update status_conta/valor_total_conta in clientes table (likely columns missing):', clientErr);
-        }
+          await realSupabase
+            .from('clientes')
+            .update({ status_conta: 'Conta Paga', valor_total_conta: 0 })
+            .eq('nome', cliNome)
+            .eq('quiosque', quiosque);
+        } catch {}
 
         showToast(`Conta da mesa ${quiosque} finalizada com sucesso!`, 'success');
+        // Final refresh to ensure absolute sync
         await Promise.all([fetchOrders(), fetchClientes()]);
       } catch (err) {
         console.error('Error paying bill on Supabase:', err);

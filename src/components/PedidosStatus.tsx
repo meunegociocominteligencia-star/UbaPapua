@@ -254,30 +254,55 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
           
           {/* Resumo de Consumo & Fechar Conta */}
           {(() => {
-            const activeOrders = orders.filter(o => o.status !== 'Cancelado');
-            const isBillAlreadyRequested = orders.some(o => o.conta_solicitada);
-            const totalBillAmount = activeOrders.reduce((sum, o) => sum + o.valor_final, 0);
+            const activeUnpaidOrders = orders.filter(o => o.status !== 'Cancelado' && !o.pago);
+            const activePaidOrders = orders.filter(o => o.status !== 'Cancelado' && o.pago);
+            const totalUnpaidAmount = activeUnpaidOrders.reduce((sum, o) => sum + o.valor_final, 0);
+            const totalPaidAmount = activePaidOrders.reduce((sum, o) => sum + o.valor_final, 0);
+            
+            const isBillAlreadyRequested = activeUnpaidOrders.some(o => o.conta_solicitada);
 
-            if (activeOrders.length === 0) return null;
+            if (orders.filter(o => o.status !== 'Cancelado').length === 0) return null;
+
+            const isAllPaid = activeUnpaidOrders.length === 0 && activePaidOrders.length > 0;
 
             return (
-              <div className="bg-[#FCFBF9] border-t-4 border-[#0077BE] border border-[#E8E2D9] rounded-[32px] p-5 shadow-sm space-y-4 mt-8">
+              <div className={`bg-[#FCFBF9] border-t-4 ${isAllPaid ? 'border-emerald-500' : isBillAlreadyRequested ? 'border-amber-500' : 'border-[#0077BE]'} border border-[#E8E2D9] rounded-[32px] p-5 shadow-sm space-y-4 mt-8`}>
                 <div className="flex items-center justify-between">
                   <div>
                     <h4 className="text-xs font-black text-[#A89F91] uppercase tracking-widest">Resumo de Consumo</h4>
-                    <p className="text-[10px] text-[#5C6B73]">Soma de todos os seus pedidos ativos</p>
+                    <p className="text-[10px] text-[#5C6B73]">
+                      {isAllPaid ? 'Sua conta foi finalizada com sucesso!' : 'Soma de todos os seus pedidos ativos'}
+                    </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] text-[#A89F91] block uppercase font-bold">Total Consumido</span>
-                    <span className="text-base font-extrabold text-[#0077BE]">R$ {totalBillAmount.toFixed(2)}</span>
+                    <span className="text-[9px] text-[#A89F91] block uppercase font-bold">
+                      {isAllPaid ? 'Total Pago' : 'Total Pendente'}
+                    </span>
+                    <span className={`text-base font-extrabold ${isAllPaid ? 'text-emerald-600' : 'text-[#0077BE]'}`}>
+                      R$ {(isAllPaid ? totalPaidAmount : totalUnpaidAmount).toFixed(2)}
+                    </span>
                   </div>
                 </div>
+
+                {/* Status da Conta Indicator */}
+                <div className="flex items-center justify-between bg-[#F5F2ED] rounded-xl px-4 py-2.5 text-xs font-semibold text-[#1A2E35]">
+                  <span className="text-[10px] uppercase font-bold text-[#A89F91]">Status da Conta:</span>
+                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
+                    isAllPaid 
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+                      : isBillAlreadyRequested
+                      ? 'bg-amber-50 border border-amber-200 text-amber-700 animate-pulse'
+                      : 'bg-sky-50 border border-sky-200 text-sky-700 font-bold'
+                  }`}>
+                    {isAllPaid ? 'Conta Paga' : isBillAlreadyRequested ? 'Aguardando confirmação de Pagamento' : 'Conta em Aberto'}
+                  </span>
+                </div>
                 
-                {onCloseBill && (
+                {onCloseBill && !isAllPaid && (
                   <button
                     onClick={() => {
                       if (isBillAlreadyRequested) return;
-                      if (window.confirm(`Deseja solicitar o fechamento da conta no valor de R$ ${totalBillAmount.toFixed(2)}? Nosso garçom virá à sua mesa.`)) {
+                      if (window.confirm(`Deseja solicitar o fechamento da conta no valor de R$ ${totalUnpaidAmount.toFixed(2)}? Nosso garçom virá à sua mesa.`)) {
                         onCloseBill();
                       }
                     }}
@@ -302,6 +327,12 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                       </>
                     )}
                   </button>
+                )}
+
+                {isAllPaid && (
+                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-center py-3 rounded-2xl text-[11px] font-bold">
+                    Obrigado pela preferência! Volte sempre! 😊
+                  </div>
                 )}
               </div>
             );
