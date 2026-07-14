@@ -249,6 +249,15 @@ export function AdminPanel({
   });
   const [orderCategoryFilter, setOrderCategoryFilter] = useState('all');
 
+  // Counter Sale Modal State
+  const [isCounterSale, setIsCounterSale] = useState(false);
+  const [counterSaleForm, setCounterSaleForm] = useState({
+    pagamento: 'pix' as 'pix' | 'cartao_credito' | 'cartao_debito' | 'dinheiro',
+    observacoes: '',
+    itens: {} as { [prodId: string]: number }
+  });
+  const [counterCategoryFilter, setCounterCategoryFilter] = useState('all');
+
   const fetchTeamUsers = async () => {
     setIsLoadingUsers(true);
     try {
@@ -702,6 +711,128 @@ export function AdminPanel({
       itens: {}
     });
     setIsAddingOrder(false);
+  };
+
+  const handleSaveCounterSale = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const activeItens = Object.entries(counterSaleForm.itens)
+      .map(([prodId, qtyVal]) => {
+        const qty = qtyVal as number;
+        const prod = products.find((p) => p.id === prodId);
+        return {
+          produto_id: prodId,
+          produto_nome: prod?.nome || 'Produto',
+          quantidade: qty,
+          valor: prod?.preco || 0
+        };
+      })
+      .filter((it) => it.quantidade > 0);
+
+    if (activeItens.length === 0) {
+      alert('Selecione pelo menos um item para a venda.');
+      return;
+    }
+
+    const subtotal = activeItens.reduce((acc, it) => acc + it.valor * it.quantidade, 0);
+    // Counter sales do not have service tax by default (0%)
+    const taxAmount = 0;
+    const finalAmount = subtotal;
+
+    const payMethodNames: Record<string, string> = {
+      pix: 'PIX',
+      cartao_credito: 'Cartão de Crédito',
+      cartao_debito: 'Cartão de Débito',
+      dinheiro: 'Dinheiro'
+    };
+
+    const payMethodName = payMethodNames[counterSaleForm.pagamento] || counterSaleForm.pagamento;
+    const orderNotes = `[Venda no Balcão - Pago via ${payMethodName}] ${counterSaleForm.observacoes}`.trim();
+
+    const newOrder: any = {
+      id: 'o_' + Math.random().toString(36).substr(2, 9),
+      cliente_nome: 'Venda no Balcão',
+      quiosque: 'Balcão',
+      status: 'Entregue',
+      valor_total: subtotal,
+      taxa_servico: taxAmount,
+      valor_final: finalAmount,
+      observacoes: orderNotes,
+      pago: true,
+      created_at: new Date().toISOString(),
+      itens: activeItens
+    };
+
+    let savedOnline = false;
+    const realSupabase = getSupabase();
+    if (realSupabase && hasSupabaseConfig) {
+      try {
+        const { error: ordErr } = await realSupabase.from('pedidos').insert({
+          id: newOrder.id,
+          cliente_nome: newOrder.cliente_nome,
+          quiosque: newOrder.quiosque,
+          status: newOrder.status,
+          valor_total: newOrder.valor_total,
+          taxa_servico: newOrder.taxa_servico,
+          valor_final: newOrder.valor_final,
+          observacoes: newOrder.observacoes,
+          pago: newOrder.pago,
+          created_at: newOrder.created_at
+        });
+        if (ordErr) throw ordErr;
+
+        const itemsToInsert = activeItens.map((it) => ({
+          pedido_id: newOrder.id,
+          produto_id: it.produto_id,
+          produto_nome: it.produto_nome,
+          quantidade: it.quantidade,
+          valor: it.valor
+        }));
+
+        const { error: itemsErr } = await realSupabase.from('pedido_itens').insert(itemsToInsert);
+        if (itemsErr) throw itemsErr;
+
+        // Decrement stock in Supabase
+        for (const item of activeItens) {
+          const prod = products.find((p) => p.id === item.produto_id);
+          if (prod && prod.estoque !== undefined && prod.estoque !== null) {
+            const newEstoque = Math.max(0, prod.estoque - item.quantidade);
+            await realSupabase.from('produtos').update({ estoque: newEstoque }).eq('id', prod.id);
+          }
+        }
+
+        savedOnline = true;
+      } catch (err) {
+        console.error('Failed to save counter sale to Supabase:', err);
+      }
+    }
+
+    if (!savedOnline) {
+      try {
+        const res = await fetch(getApiUrl('/api/orders'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newOrder)
+        });
+        if (!res.ok) throw new Error('Failed to save counter sale to local server');
+      } catch (err) {
+        console.error('Counter sale local order post failed:', err);
+      }
+    }
+
+    // Refresh data immediately to update dashboards and charts
+    if (onRefreshData) {
+      await onRefreshData();
+    }
+
+    // Reset Form & Close Modal
+    setCounterSaleForm({
+      pagamento: 'pix',
+      observacoes: '',
+      itens: {}
+    });
+    setIsCounterSale(false);
+    alert('Venda no balcão realizada com sucesso! R$ ' + finalAmount.toFixed(2) + ' recebido via ' + payMethodName + '.');
   };
 
   const [prodPeriod, setProdPeriod] = useState<'today' | '7days' | '30days' | 'all'>('all');
@@ -1174,6 +1305,19 @@ export function AdminPanel({
       .filter(item => item.prod && item.quantidade > 0);
   }, [waiterOrderForm.itens, products]);
 
+  const counterSelectedItemsWithQty = useMemo(() => {
+    return Object.entries(counterSaleForm.itens)
+      .map(([prodId, qty]) => {
+        const prod = products.find(p => p.id === prodId);
+        return {
+          prod,
+          prodId,
+          quantidade: qty as number
+        };
+      })
+      .filter(item => item.prod && item.quantidade > 0);
+  }, [counterSaleForm.itens, products]);
+
   if (adminUser === null) {
     return (
       <div className="min-h-screen bg-[#FCFBF9] text-[#1B3322] flex items-center justify-center p-6 font-sans">
@@ -1476,22 +1620,39 @@ export function AdminPanel({
                   <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Painel de Pedidos em Tempo Real</h2>
                   <p className="text-xs text-[#706558]">Ordene e atualize o status dos pedidos instantaneamente</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setWaiterOrderForm({
-                      cliente_nome: '',
-                      quiosque: '',
-                      observacoes: '',
-                      itens: {}
-                    });
-                    setIsAddingOrder(true);
-                  }}
-                  className="bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2 shrink-0 self-start sm:self-center"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>Lançar Venda (Garçom)</span>
-                </button>
+                <div className="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCounterSaleForm({
+                        pagamento: 'pix',
+                        observacoes: '',
+                        itens: {}
+                      });
+                      setIsCounterSale(true);
+                    }}
+                    className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    <span>🍻 Venda no Balcão</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setWaiterOrderForm({
+                        cliente_nome: '',
+                        quiosque: '',
+                        observacoes: '',
+                        itens: {}
+                      });
+                      setIsAddingOrder(true);
+                    }}
+                    className="bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    <span>Lançar Venda (Garçom)</span>
+                  </button>
+                </div>
               </div>
 
               {orders.length === 0 ? (
@@ -3625,6 +3786,226 @@ export function AdminPanel({
                         className="flex-1 py-2.5 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md shadow-green-100"
                       >
                         Confirmar Pedido
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Counter Sale Modal */}
+      <AnimatePresence>
+        {isCounterSale && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-[#FCFBF9] w-full max-w-4xl rounded-[32px] border border-[#E3DCD2] shadow-2xl flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="p-6 border-b border-[#E3DCD2] flex justify-between items-center bg-amber-600 text-white rounded-t-[32px]">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🍻</span>
+                  <div>
+                    <h3 className="text-base font-serif italic font-bold">Venda Direta no Balcão (Sem Cadastro)</h3>
+                    <p className="text-[10px] text-amber-100 font-semibold">Venda avulsa de produtos com pagamento e entrega imediata</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCounterSale(false)}
+                  className="p-1.5 rounded-xl hover:bg-amber-700 text-white cursor-pointer transition-all"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              <form onSubmit={handleSaveCounterSale} className="flex-1 overflow-y-auto p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+                {/* Column Left (ColSpan 7) */}
+                <div className="lg:col-span-7 space-y-4">
+                  {/* Category Filter */}
+                  <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+                    <button
+                      type="button"
+                      onClick={() => setCounterCategoryFilter('all')}
+                      className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
+                        counterCategoryFilter === 'all'
+                          ? 'bg-amber-600 text-white border-amber-600'
+                          : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                      }`}
+                    >
+                      Todos
+                    </button>
+                    {categorias.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        onClick={() => setCounterCategoryFilter(cat.nome)}
+                        className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
+                          counterCategoryFilter === cat.nome
+                            ? 'bg-amber-600 text-white border-amber-600'
+                            : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                        }`}
+                      >
+                        {cat.nome}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Products Grid selector */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1">
+                    {products
+                      .filter(p => p.ativo)
+                      .filter(p => counterCategoryFilter === 'all' || p.categoria === counterCategoryFilter)
+                      .map(prod => {
+                        const count = counterSaleForm.itens[prod.id] || 0;
+                        const isOutOfStock = prod.estoque !== null && prod.estoque !== undefined && prod.estoque <= 0;
+
+                        return (
+                          <div
+                            key={prod.id}
+                            className={`p-3 bg-white rounded-xl border flex gap-3 items-center justify-between transition-all ${
+                              count > 0 ? 'border-amber-600 bg-amber-50/10 ring-1 ring-amber-600/10' : 'border-[#E3DCD2]'
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <h4 className="text-xs font-bold text-[#1B3322] truncate">{prod.nome}</h4>
+                              <p className="text-[10px] font-extrabold text-amber-600 mt-0.5">R$ {prod.preco.toFixed(2)}</p>
+                              {prod.estoque !== null && prod.estoque !== undefined && (
+                                <p className={`text-[9px] font-semibold ${isOutOfStock ? 'text-red-600 animate-pulse' : 'text-[#9C8E7B]'} mt-0.5`}>
+                                  {isOutOfStock ? 'Sem Estoque' : `Estoque: ${prod.estoque} un`}
+                                </p>
+                              )}
+                            </div>
+
+                            {/* Qty controls */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                disabled={count === 0}
+                                onClick={() => {
+                                  setCounterSaleForm(prev => {
+                                    const nextItens = { ...prev.itens };
+                                    if (nextItens[prod.id] > 1) {
+                                      nextItens[prod.id]--;
+                                    } else {
+                                      delete nextItens[prod.id];
+                                    }
+                                    return { ...prev, itens: nextItens };
+                                  });
+                                }}
+                                className="w-6 h-6 rounded-lg border border-[#E3DCD2] hover:bg-[#F4EFE6] disabled:opacity-30 text-[#706558] font-bold text-xs flex items-center justify-center cursor-pointer"
+                              >
+                                -
+                              </button>
+                              <span className="text-xs font-black w-4 text-center text-[#1B3322]">{count}</span>
+                              <button
+                                type="button"
+                                disabled={isOutOfStock || (prod.estoque !== null && prod.estoque !== undefined && count >= prod.estoque)}
+                                onClick={() => {
+                                  setCounterSaleForm(prev => {
+                                    const nextItens = { ...prev.itens };
+                                    nextItens[prod.id] = (nextItens[prod.id] || 0) + 1;
+                                    return { ...prev, itens: nextItens };
+                                  });
+                                }}
+                                className="w-6 h-6 rounded-lg bg-amber-600 hover:bg-amber-700 disabled:bg-gray-200 text-white font-bold text-xs flex items-center justify-center cursor-pointer"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Column Right (ColSpan 5) */}
+                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#E3DCD2] flex flex-col justify-between space-y-4">
+                  <div className="space-y-4">
+                    <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider border-b border-[#E3DCD2] pb-2">Resumo da Venda</h3>
+
+                    {/* Selected items list */}
+                    <div className="space-y-2 max-h-[22vh] overflow-y-auto pr-1">
+                      {counterSelectedItemsWithQty.length === 0 ? (
+                        <p className="text-[11px] text-[#706558] italic text-center py-6">Nenhum produto selecionado</p>
+                      ) : (
+                        counterSelectedItemsWithQty.map(({ prod, prodId, quantidade }) => (
+                          <div key={prodId} className="flex justify-between items-center text-xs text-[#1B3322]">
+                            <span>
+                              <strong className="text-amber-600">{quantidade}x</strong> {prod?.nome}
+                            </span>
+                            <span className="font-semibold text-[#706558]">R$ {((prod?.preco || 0) * quantidade).toFixed(2)}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* Forma de Pagamento */}
+                    <div className="space-y-2 pt-2 border-t border-[#E3DCD2]">
+                      <label className="text-[10px] font-extrabold text-[#706558] uppercase block">Forma de Pagamento (Recebido na Hora)</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {[
+                          { id: 'pix', label: '📱 PIX' },
+                          { id: 'cartao_credito', label: '💳 Crédito' },
+                          { id: 'cartao_debito', label: '💳 Débito' },
+                          { id: 'dinheiro', label: '💵 Dinheiro' }
+                        ].map(method => (
+                          <button
+                            key={method.id}
+                            type="button"
+                            onClick={() => setCounterSaleForm(prev => ({ ...prev, pagamento: method.id as any }))}
+                            className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
+                              counterSaleForm.pagamento === method.id
+                                ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
+                                : 'bg-[#FCFBF9] text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                            }`}
+                          >
+                            {method.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Observações */}
+                    <div className="space-y-1 pt-2 border-t border-[#E3DCD2]">
+                      <label className="text-[9px] font-extrabold text-[#706558] uppercase block">Observações / Detalhes</label>
+                      <textarea
+                        placeholder="Ex: sem gelo, observação do cliente..."
+                        value={counterSaleForm.observacoes}
+                        onChange={(e) => setCounterSaleForm(prev => ({ ...prev, observacoes: e.target.value }))}
+                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs text-[#1B3322] h-12 resize-none outline-none focus:ring-1 focus:ring-amber-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Calculations & Submit */}
+                  <div className="space-y-3 pt-3 border-t border-[#E3DCD2]">
+                    <div className="space-y-1.5 text-xs">
+                      <div className="flex justify-between text-sm font-black text-amber-600 border-t border-[#E3DCD2]/50 pt-2">
+                        <span>Total a Receber</span>
+                        <span>R$ {counterSelectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0).toFixed(2)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsCounterSale(false)}
+                        className="flex-1 py-2.5 bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322] font-bold text-xs rounded-xl cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        className="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md shadow-amber-100"
+                      >
+                        Finalizar Venda 🍻
                       </button>
                     </div>
                   </div>
