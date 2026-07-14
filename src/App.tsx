@@ -686,7 +686,7 @@ export default function App() {
   };
 
   // Log out or change kiosk table session
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setClienteNome(null);
     setClienteQuiosque(null);
     setClienteCelular(null);
@@ -694,6 +694,12 @@ export default function App() {
     safeStorage.removeItem('cliente_quiosque');
     safeStorage.removeItem('cliente_celular');
     setCart({});
+    try {
+      await offlineDB.clearOrderHistories();
+    } catch (e) {
+      console.warn('Erro ao limpar histórico IndexedDB:', e);
+    }
+    setLocalOrderHistoryList([]);
     setActiveView('identification');
   };
 
@@ -1757,14 +1763,13 @@ export default function App() {
     const fetchLocalHistories = async () => {
       const cachedHistories = await offlineDB.getOrderHistories();
       
-      // Filter cached history list and exclude paid orders
+      // Filter cached history list and include matching orders
       const filteredCached = cachedHistories.filter(
-        (o) => !o.pago && (o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque))
+        (o) => o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque)
       );
 
-      // Combine with active orders and exclude paid ones
+      // Combine with active orders
       const matchingActive = orders.filter((o) => {
-        if (o.pago) return false;
         if (clienteCelular && o.cliente_telefone) {
           return o.cliente_telefone === clienteCelular;
         }
@@ -1894,6 +1899,7 @@ export default function App() {
               onRefresh={fetchOrders}
               onCancelOrder={handleCancelOrder}
               onCloseBill={handleCloseBill}
+              onClearSession={handleLogout}
             />
 
             {/* Same quick access bottom navigation */}

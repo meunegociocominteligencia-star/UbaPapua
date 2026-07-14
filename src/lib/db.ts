@@ -242,6 +242,23 @@ class IndexedDBManager {
       }
     });
   }
+
+  public async clearOrderHistories(): Promise<void> {
+    return new Promise((resolve) => {
+      try {
+        const store = this.getStore('historico_pedidos', 'readwrite');
+        if (!store) {
+          resolve();
+          return;
+        }
+        const request = store.clear();
+        request.onsuccess = () => resolve();
+        request.onerror = () => resolve();
+      } catch {
+        resolve();
+      }
+    });
+  }
 }
 
 export const offlineDB = new IndexedDBManager();

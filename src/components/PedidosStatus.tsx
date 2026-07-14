@@ -14,9 +14,10 @@ interface PedidosStatusProps {
   onRefresh?: () => Promise<void>;
   onCancelOrder?: (id: string) => void;
   onCloseBill?: () => void;
+  onClearSession?: () => void;
 }
 
-export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, onCloseBill }: PedidosStatusProps) {
+export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, onCloseBill, onClearSession }: PedidosStatusProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const steps: { label: OrderStatus; desc: string; color: string }[] = [
@@ -132,6 +133,8 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                       className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
                         isCancelled
                           ? 'bg-red-50 border border-red-200 text-red-700'
+                          : order.pago
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-700 font-black'
                           : order.status === 'Entregue'
                           ? 'bg-[#F5F2ED] border border-[#E8E2D9] text-[#5C6B73]'
                           : order.status === 'Pronto'
@@ -141,7 +144,7 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                           : 'bg-blue-50 border border-blue-100 text-[#0077BE]'
                       }`}
                     >
-                      {order.status}
+                      {order.pago ? 'Pago ✅' : order.status}
                     </div>
                   </div>
 
@@ -330,8 +333,18 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                 )}
 
                 {isAllPaid && (
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-center py-3 rounded-2xl text-[11px] font-bold">
-                    Obrigado pela preferência! Volte sempre! 😊
+                  <div className="space-y-3">
+                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-center py-3 rounded-2xl text-[11px] font-bold">
+                      Obrigado pela preferência! Volte sempre! 😊
+                    </div>
+                    {onClearSession && (
+                      <button
+                        onClick={onClearSession}
+                        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+                      >
+                        🔄 Iniciar Novo Atendimento (Limpar Pedidos)
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
