@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { ClipboardList, CheckCircle2, Clock, Flame, GlassWater, ChevronRight, Check, RefreshCw } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, Flame, GlassWater, ChevronRight, Check, RefreshCw, FileText, Download } from 'lucide-react';
 import { motion } from 'motion/react';
+import { jsPDF } from 'jspdf';
 import { Pedido, OrderStatus } from '../types';
 
 interface PedidosStatusProps {
@@ -43,6 +44,180 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
       setTimeout(() => {
         setIsRefreshing(false);
       }, 600);
+    }
+  };
+
+  const generateReceiptPDF = (ordersToInclude: Pedido[], title: string = 'Recibo de Consumo') => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a6', // compact size, fits receipt look beautifully
+      });
+
+      const firstOrder = ordersToInclude[0];
+      const clientName = firstOrder?.cliente_nome || 'Cliente';
+      const kiosk = firstOrder?.quiosque || 'Balcão';
+      const dateStr = new Date().toLocaleDateString('pt-BR');
+      const timeStr = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+      // Consolidate identical items across orders
+      const itemsMap: { [key: string]: { nome: string; qtd: number; valor: number } } = {};
+      let subtotal = 0;
+      let serviceFee = 0;
+      let total = 0;
+
+      ordersToInclude.forEach(o => {
+        subtotal += o.valor_total;
+        serviceFee += o.taxa_servico;
+        total += o.valor_final;
+
+        o.itens.forEach(item => {
+          const key = item.produto_id || item.produto_nome;
+          if (itemsMap[key]) {
+            itemsMap[key].qtd += item.quantidade;
+          } else {
+            itemsMap[key] = {
+              nome: item.produto_nome,
+              qtd: item.quantidade,
+              valor: item.valor
+            };
+          }
+        });
+      });
+
+      const consolidatedItems = Object.values(itemsMap);
+
+      const margin = 8;
+      const width = 105; // A6 width in mm
+      let y = 12;
+
+      // Header
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.setTextColor(27, 51, 34); // #1B3322 dark green
+      doc.text('BARRACA & QUIOSQUE', width / 2, y, { align: 'center' });
+      
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(112, 101, 88); // #706558
+      doc.text(title, width / 2, y, { align: 'center' });
+
+      y += 6;
+      doc.setDrawColor(227, 220, 210); // #E3DCD2 border color
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, width - margin, y);
+
+      // Customer Details
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(27, 51, 34);
+      doc.text('Cliente:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(clientName, margin + 12, y);
+
+      y += 4.5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Mesa/Quiosque:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(kiosk, margin + 23, y);
+
+      y += 4.5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('Data/Hora:', margin, y);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${dateStr} às ${timeStr}`, margin + 16, y);
+
+      y += 4;
+      doc.line(margin, y, width - margin, y);
+
+      // Table Header
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(112, 101, 88);
+      doc.text('Item', margin, y);
+      doc.text('Qtd', width - margin - 22, y, { align: 'right' });
+      doc.text('Total', width - margin, y, { align: 'right' });
+
+      y += 3;
+      doc.line(margin, y, width - margin, y);
+
+      // Table Items
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(27, 51, 34);
+
+      consolidatedItems.forEach(item => {
+        y += 4.5;
+        // Check for page overflow
+        if (y > 135) {
+          doc.addPage();
+          y = 12;
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(7.5);
+          doc.setTextColor(112, 101, 88);
+          doc.text('Item (continuação)', margin, y);
+          doc.text('Qtd', width - margin - 22, y, { align: 'right' });
+          doc.text('Total', width - margin, y, { align: 'right' });
+          y += 3;
+          doc.line(margin, y, width - margin, y);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(27, 51, 34);
+          y += 4.5;
+        }
+
+        let nome = item.nome;
+        if (nome.length > 25) {
+          nome = nome.substring(0, 23) + '...';
+        }
+
+        doc.text(nome, margin, y);
+        doc.text(`${item.qtd}x`, width - margin - 22, y, { align: 'right' });
+        doc.text(`R$ ${(item.valor * item.qtd).toFixed(2)}`, width - margin, y, { align: 'right' });
+      });
+
+      y += 4;
+      doc.line(margin, y, width - margin, y);
+
+      // Totals
+      y += 5;
+      doc.setFont('helvetica', 'normal');
+      doc.text('Subtotal:', width - margin - 25, y, { align: 'right' });
+      doc.text(`R$ ${subtotal.toFixed(2)}`, width - margin, y, { align: 'right' });
+
+      if (serviceFee > 0) {
+        y += 4;
+        doc.text('Taxa de Serviço:', width - margin - 25, y, { align: 'right' });
+        doc.text(`R$ ${serviceFee.toFixed(2)}`, width - margin, y, { align: 'right' });
+      }
+
+      y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text('Total Geral:', width - margin - 25, y, { align: 'right' });
+      doc.text(`R$ ${total.toFixed(2)}`, width - margin, y, { align: 'right' });
+
+      y += 5;
+      doc.line(margin, y, width - margin, y);
+
+      // Footer
+      y += 6;
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(7);
+      doc.setTextColor(112, 101, 88);
+      doc.text('Obrigado pela preferência! Volte Sempre! 😊', width / 2, y, { align: 'center' });
+      y += 3.5;
+      doc.setFont('helvetica', 'bold');
+      doc.text('CONTA PAGA E CONFIRMADA', width / 2, y, { align: 'center' });
+
+      const fileName = `recibo_conta_${clientName.toLowerCase().replace(/\s+/g, '_')}_${kiosk.toLowerCase().replace(/\s+/g, '_')}.pdf`;
+      doc.save(fileName);
+    } catch (err) {
+      console.error('Failed to generate receipt PDF:', err);
+      alert('Não foi possível gerar o comprovante em PDF.');
     }
   };
 
@@ -250,6 +425,16 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                       Cancelar Pedido
                     </button>
                   )}
+
+                  {order.pago && (
+                    <button
+                      onClick={() => generateReceiptPDF([order], `Recibo do Pedido #${order.id.slice(-4).toUpperCase()}`)}
+                      className="w-full mt-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-100 hover:border-emerald-200 text-xs font-bold rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Baixar Recibo do Pedido (PDF)</span>
+                    </button>
+                  )}
                 </motion.div>
               );
             })}
@@ -337,6 +522,14 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                     <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-center py-3 rounded-2xl text-[11px] font-bold">
                       Obrigado pela preferência! Volte sempre! 😊
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => generateReceiptPDF(activePaidOrders, 'Recibo Completo de Consumo')}
+                      className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>📥 Baixar Comprovante Completo (PDF)</span>
+                    </button>
                     {onClearSession && (
                       <button
                         onClick={onClearSession}

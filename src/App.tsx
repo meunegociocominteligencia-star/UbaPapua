@@ -1765,11 +1765,12 @@ export default function App() {
       
       // Filter cached history list and include matching orders
       const filteredCached = cachedHistories.filter(
-        (o) => o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque)
+        (o) => (o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque)) && !o.pago
       );
 
       // Combine with active orders
       const matchingActive = orders.filter((o) => {
+        if (o.pago) return false;
         if (clienteCelular && o.cliente_telefone) {
           return o.cliente_telefone === clienteCelular;
         }
