@@ -147,11 +147,15 @@ export function AdminPanel({
       ? parseFloat(client.valor_total_conta)
       : (client.valor_total_conta || 0);
 
-    if (client.status_conta === 'Conta em Aberto' && storedTotal > 0) {
+    if (ordersTotal > 0) {
+      return ordersTotal;
+    }
+
+    if (client.status_conta === 'Conta em Aberto' || client.status_conta === 'Aguardando confirmação de Pagamento') {
       return storedTotal;
     }
     
-    return ordersTotal;
+    return 0;
   };
 
   // Helper to dynamically get client status
@@ -184,14 +188,19 @@ export function AdminPanel({
     });
 
     const activeOrders = matchingOrders.filter(o => o.status !== 'Cancelado' && !o.pago);
+    const ordersTotal = activeOrders.reduce((sum, o) => sum + o.valor_final, 0);
 
-    if (activeOrders.length === 0) {
-      return client.status_conta || 'Conta Paga';
+    const storedTotal = typeof client.valor_total_conta === 'string'
+      ? parseFloat(client.valor_total_conta)
+      : (client.valor_total_conta || 0);
+
+    if (activeOrders.length === 0 && ordersTotal === 0 && storedTotal === 0 && client.status_conta !== 'Aguardando confirmação de Pagamento' && client.status_conta !== 'Conta em Aberto') {
+      return 'Conta Paga';
     }
 
-    const hasRequested = activeOrders.some(order => order.conta_solicitada);
+    const hasRequested = activeOrders.some(order => order.conta_solicitada) || client.status_conta === 'Aguardando confirmação de Pagamento';
 
-    return hasRequested ? 'Aguardando confirmação de Pagamento' : (client.status_conta || 'Conta em Aberto');
+    return hasRequested ? 'Aguardando confirmação de Pagamento' : 'Conta em Aberto';
   };
   
   // Administrative & Waiter Session Auth State

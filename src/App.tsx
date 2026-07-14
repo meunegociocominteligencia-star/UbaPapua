@@ -751,7 +751,8 @@ export default function App() {
       observacoes: observacoes.trim(),
       created_at: new Date().toISOString(),
       itens: orderItens,
-      synced: networkStatus === 'online'
+      synced: networkStatus === 'online',
+      pago: false
     };
 
     // Store in all historic tracker local for tracking status
@@ -796,7 +797,8 @@ export default function App() {
               taxa_servico: newOrder.taxa_servico,
               valor_final: newOrder.valor_final,
               observacoes: newOrder.observacoes,
-              created_at: newOrder.created_at
+              created_at: newOrder.created_at,
+              pago: false
             });
             if (ordErr) throw ordErr;
 
@@ -818,6 +820,25 @@ export default function App() {
                 const newEstoque = Math.max(0, prod.estoque - item.quantidade);
                 await realSupabase.from('produtos').update({ estoque: newEstoque }).eq('id', prod.id);
               }
+            }
+
+            // Update client status_conta to 'Conta em Aberto' because they placed a new order
+            try {
+              const clientPhone = (newOrder.cliente_telefone || '').replace(/\D/g, '');
+              if (clientPhone) {
+                await realSupabase
+                  .from('clientes')
+                  .update({ status_conta: 'Conta em Aberto' })
+                  .eq('telefone', clientPhone);
+              } else {
+                await realSupabase
+                  .from('clientes')
+                  .update({ status_conta: 'Conta em Aberto' })
+                  .eq('nome', newOrder.cliente_nome)
+                  .eq('quiosque', newOrder.quiosque);
+              }
+            } catch (clientUpdateErr) {
+              console.warn('Failed to update client status_conta to Conta em Aberto on order submission:', clientUpdateErr);
             }
 
             syncedSuccessfully = true;
@@ -1708,19 +1729,42 @@ export default function App() {
     }
   };
 
+  // Synchronize payment status changes of our orders to offlineDB histories
+  useEffect(() => {
+    const syncHistoriesToOfflineDB = async () => {
+      try {
+        const cachedHistories = await offlineDB.getOrderHistories();
+        for (const order of orders) {
+          const cached = cachedHistories.find(c => c.id === order.id);
+          if (cached && cached.pago !== order.pago) {
+            await offlineDB.saveOrderHistory({ ...cached, pago: order.pago, status: order.status });
+          } else if (!cached && (order.cliente_telefone === clienteCelular || (order.cliente_nome === clienteNome && order.quiosque === clienteQuiosque))) {
+            await offlineDB.saveOrderHistory(order);
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing histories to offline DB:', err);
+      }
+    };
+    if (orders.length > 0) {
+      syncHistoriesToOfflineDB();
+    }
+  }, [orders, clienteCelular, clienteNome, clienteQuiosque]);
+
   // Client historical tracking filter helper
   const [localOrderHistoryList, setLocalOrderHistoryList] = useState<Pedido[]>([]);
   useEffect(() => {
     const fetchLocalHistories = async () => {
       const cachedHistories = await offlineDB.getOrderHistories();
       
-      // Filter cached history list by customer's phone number
+      // Filter cached history list and exclude paid orders
       const filteredCached = cachedHistories.filter(
-        (o) => o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque)
+        (o) => !o.pago && (o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque))
       );
 
-      // Combine with active orders matching customer's phone number or name/kiosk fallback
+      // Combine with active orders and exclude paid ones
       const matchingActive = orders.filter((o) => {
+        if (o.pago) return false;
         if (clienteCelular && o.cliente_telefone) {
           return o.cliente_telefone === clienteCelular;
         }

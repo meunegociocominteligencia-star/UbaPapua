@@ -28,7 +28,7 @@ export interface Cliente {
   celular?: string;
   telefone?: string;
   created_at?: string;
-  status_conta?: 'Conta em Aberto' | 'Conta Paga';
+  status_conta?: 'Conta em Aberto' | 'Conta Paga' | 'Aguardando confirmação de Pagamento';
   valor_total_conta?: number;
 }
 

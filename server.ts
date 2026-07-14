@@ -658,6 +658,21 @@ async function startServer() {
       });
     }
 
+    // Update in-memory client status to 'Conta em Aberto' because they placed a new order
+    if (newOrder.quiosque && newOrder.cliente_nome) {
+      const normQuiosque = normalizeString(newOrder.quiosque);
+      const normClientName = normalizeString(newOrder.cliente_nome);
+      const cliIndex = clientes.findIndex(c => {
+        const k = normalizeString(c.quiosque || '');
+        const n = normalizeString(c.nome || '');
+        return k === normQuiosque && (n === normClientName || n.split(' ')[0] === normClientName.split(' ')[0]);
+      });
+      if (cliIndex !== -1) {
+        clientes[cliIndex].status_conta = 'Conta em Aberto';
+        broadcastSSE({ type: 'client_updated', client: clientes[cliIndex] });
+      }
+    }
+
     broadcastSSE({ type: 'order_created', order: newOrder, products: produtos });
     res.status(201).json(newOrder);
   });
