@@ -1958,7 +1958,15 @@ export function AdminPanel({
               <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
                 <div>
                   <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Cardápio de Produtos</h2>
-                  <p className="text-xs text-[#706558]">Cadastre, edite e controle a disponibilidade dos itens</p>
+                  <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                    <p className="text-xs text-[#706558]">Cadastre, edite e controle a disponibilidade dos itens</p>
+                    {products.filter(p => p.estoque !== undefined && p.estoque !== null && p.estoque < 5).length > 0 && (
+                      <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                        <AlertCircle className="h-3 w-3 text-amber-600" />
+                        {products.filter(p => p.estoque !== undefined && p.estoque !== null && p.estoque < 5).length} itens com estoque baixo!
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={handleAddProductClick}
@@ -2217,47 +2225,72 @@ export function AdminPanel({
 
               {/* Product list grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {products.map((prod) => (
-                  <div
-                    key={prod.id}
-                    className="p-4 bg-white border border-[#E3DCD2] rounded-2xl flex gap-4 items-center justify-between shadow-sm hover:shadow-md transition-all"
-                  >
-                    <div className="flex gap-3 items-center min-w-0">
-                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#E3DCD2] flex-shrink-0">
-                        <img src={prod.imagem} alt={prod.nome} className="w-full h-full object-cover" />
-                      </div>
-                      <div className="min-w-0">
-                        <h4 className="text-sm font-bold text-[#1B3322] truncate">{prod.nome}</h4>
-                        <p className="text-[10px] text-[#706558] font-semibold flex flex-wrap items-center gap-1.5">
-                          <span>{prod.categoria} • R$ {prod.preco.toFixed(2)}</span>
-                          {prod.estoque !== undefined && prod.estoque !== null ? (
-                            <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold ${
-                              prod.estoque <= 0 
-                                ? 'bg-red-50 text-red-700 border border-red-100' 
-                                : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-                            }`}>
-                              Estoque: {prod.estoque} un
-                            </span>
-                          ) : (
-                            <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
-                              Sem Limite (Prato/Petisco)
-                            </span>
-                          )}
-                        </p>
-                        <span
-                          className={`inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded ${
-                            prod.ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
-                          }`}
-                        >
-                          {prod.ativo ? 'Disponível' : 'Indisponível'}
-                        </span>
-                      </div>
-                    </div>
+                {products.map((prod) => {
+                  const hasLowStock = prod.estoque !== undefined && prod.estoque !== null && prod.estoque < 5;
+                  const isOutOfStock = prod.estoque !== undefined && prod.estoque !== null && prod.estoque <= 0;
 
-                    <div className="flex gap-1.5 flex-shrink-0">
-                      <button
-                        onClick={() => handleEditProductClick(prod)}
-                        className="p-2 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-xl text-[#706558] border border-[#E3DCD2] cursor-pointer"
+                  return (
+                    <div
+                      key={prod.id}
+                      className={`p-4 bg-white border rounded-2xl flex gap-4 items-center justify-between shadow-sm hover:shadow-md transition-all ${
+                        isOutOfStock
+                          ? 'border-l-4 border-l-red-500 border-r-[#E3DCD2] border-t-[#E3DCD2] border-b-[#E3DCD2]'
+                          : hasLowStock
+                          ? 'border-l-4 border-l-amber-500 border-r-[#E3DCD2] border-t-[#E3DCD2] border-b-[#E3DCD2]'
+                          : 'border-[#E3DCD2]'
+                      }`}
+                    >
+                      <div className="flex gap-3 items-center min-w-0">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#E3DCD2] flex-shrink-0">
+                          <img src={prod.imagem} alt={prod.nome} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <h4 className="text-sm font-bold text-[#1B3322] truncate">{prod.nome}</h4>
+                            {hasLowStock && (
+                              <span
+                                title={isOutOfStock ? "Estoque esgotado!" : `Estoque baixo (${prod.estoque} un)!`}
+                                className={`flex items-center justify-center p-0.5 rounded-full shrink-0 ${
+                                  isOutOfStock ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-amber-50 text-amber-600'
+                                }`}
+                              >
+                                <AlertCircle className="h-3.5 w-3.5" />
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-[#706558] font-semibold flex flex-wrap items-center gap-1.5 mt-0.5">
+                            <span>{prod.categoria} • R$ {prod.preco.toFixed(2)}</span>
+                            {prod.estoque !== undefined && prod.estoque !== null ? (
+                              <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold flex items-center gap-1 ${
+                                isOutOfStock 
+                                  ? 'bg-red-50 text-red-700 border border-red-200 animate-pulse' 
+                                  : hasLowStock
+                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                              }`}>
+                                {hasLowStock && <AlertCircle className="h-2 w-2" />}
+                                Estoque: {prod.estoque} un {isOutOfStock ? '(Esgotado!)' : hasLowStock ? '(Repor!)' : ''}
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 rounded text-[8px] font-bold bg-amber-50 text-amber-700 border border-amber-100">
+                                Sem Limite (Prato/Petisco)
+                              </span>
+                            )}
+                          </p>
+                          <span
+                            className={`inline-block mt-1 text-[8px] font-bold px-1.5 py-0.5 rounded ${
+                              prod.ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'
+                            }`}
+                          >
+                            {prod.ativo ? 'Disponível' : 'Indisponível'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-1.5 flex-shrink-0">
+                        <button
+                          onClick={() => handleEditProductClick(prod)}
+                          className="p-2 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-xl text-[#706558] border border-[#E3DCD2] cursor-pointer"
                         title="Editar"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
@@ -2271,7 +2304,8 @@ export function AdminPanel({
                       </button>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
