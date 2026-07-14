@@ -58,6 +58,17 @@ import { Pedido, Produto, Categoria, ConfigEstabelecimento, OrderStatus, Cliente
 import { SUPABASE_SQL_SETUP, hasSupabaseConfig, getSupabase } from '../lib/supabase';
 import { getApiUrl } from '../lib/api';
 
+function generateUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 const normalizeString = (str: string) => {
   if (!str) return '';
   return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase();
@@ -750,8 +761,9 @@ export function AdminPanel({
     const orderNotes = `[Venda no Balcão - Pago via ${payMethodName}] ${counterSaleForm.observacoes}`.trim();
 
     const newOrder: any = {
-      id: 'o_' + Math.random().toString(36).substr(2, 9),
+      id: generateUUID(),
       cliente_nome: 'Venda no Balcão',
+      cliente_telefone: '',
       quiosque: 'Balcão',
       status: 'Entregue',
       valor_total: subtotal,
@@ -770,6 +782,7 @@ export function AdminPanel({
         const { error: ordErr } = await realSupabase.from('pedidos').insert({
           id: newOrder.id,
           cliente_nome: newOrder.cliente_nome,
+          cliente_telefone: newOrder.cliente_telefone || '',
           quiosque: newOrder.quiosque,
           status: newOrder.status,
           valor_total: newOrder.valor_total,
