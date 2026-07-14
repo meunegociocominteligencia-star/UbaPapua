@@ -20,6 +20,17 @@ interface PedidosStatusProps {
 
 export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, onCloseBill, onClearSession }: PedidosStatusProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  const activeUnpaidOrders = orders.filter(o => o.status !== 'Cancelado' && !o.pago);
+  const activePaidOrders = orders.filter(o => o.status !== 'Cancelado' && o.pago);
+  const isAllPaid = activeUnpaidOrders.length === 0 && activePaidOrders.length > 0;
+
+  React.useEffect(() => {
+    if (isAllPaid) {
+      setShowSuccessModal(true);
+    }
+  }, [isAllPaid]);
 
   const steps: { label: OrderStatus; desc: string; color: string }[] = [
     { label: 'Recebido', desc: 'Pedido enviado para a cozinha', color: 'sky' },
@@ -223,6 +234,60 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
 
   return (
     <div id="orders-status-screen" className="min-h-screen bg-[#FDFBF7] pb-32 text-[#1A2E35] p-4">
+      {/* Interactive payment success / receipt download prompt modal */}
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A2E35]/45 backdrop-blur-md">
+          <motion.div
+            initial={{ scale: 0.95, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="w-full max-w-sm bg-[#FDFBF7] border-2 border-emerald-500 rounded-[36px] p-6 text-center shadow-2xl space-y-6"
+          >
+            <div className="mx-auto w-16 h-16 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center text-3xl">
+              🎉
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="text-lg font-serif italic font-bold text-[#1A2E35]">
+                Sua conta foi paga!
+              </h3>
+              <p className="text-xs text-[#5C6B73] leading-relaxed">
+                Deseja baixar o comprovante de consumo em PDF no seu celular?
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  generateReceiptPDF(activePaidOrders, 'Recibo Completo de Consumo');
+                  if (onClearSession) {
+                    onClearSession();
+                  }
+                  setShowSuccessModal(false);
+                }}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+              >
+                <Download className="h-4 w-4" />
+                <span>Sim, baixar em PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (onClearSession) {
+                    onClearSession();
+                  }
+                  setShowSuccessModal(false);
+                }}
+                className="w-full py-3.5 bg-[#F5F2ED] hover:bg-[#E8E2D9] text-[#5C6B73] border border-[#E8E2D9] font-bold text-xs rounded-2xl transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+              >
+                Não, apenas limpar tela
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       <div className="max-w-md mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-[#E8E2D9] pb-4">

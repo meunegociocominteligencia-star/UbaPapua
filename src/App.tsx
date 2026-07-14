@@ -88,6 +88,9 @@ export default function App() {
   const [clienteCelular, setClienteCelular] = useState<string | null>(
     safeStorage.getItem('cliente_celular')
   );
+  const [clienteSessionStart, setClienteSessionStart] = useState<string | null>(
+    safeStorage.getItem('cliente_session_start')
+  );
   const [activeView, setActiveView] = useState<'identification' | 'cardapio' | 'orders_status' | 'admin'>(
     safeStorage.getItem('cliente_nome') ? 'cardapio' : 'identification'
   );
@@ -648,12 +651,15 @@ export default function App() {
 
   // Client Identification submit
   const handleIdentify = async (nome: string, quiosque: string, celular: string) => {
+    const sessionStart = new Date().toISOString();
     setClienteNome(nome);
     setClienteQuiosque(quiosque);
     setClienteCelular(celular);
+    setClienteSessionStart(sessionStart);
     safeStorage.setItem('cliente_nome', nome);
     safeStorage.setItem('cliente_quiosque', quiosque);
     safeStorage.setItem('cliente_celular', celular);
+    safeStorage.setItem('cliente_session_start', sessionStart);
   
     // Save to database
     const realSupabase = getSupabase();
@@ -690,9 +696,11 @@ export default function App() {
     setClienteNome(null);
     setClienteQuiosque(null);
     setClienteCelular(null);
+    setClienteSessionStart(null);
     safeStorage.removeItem('cliente_nome');
     safeStorage.removeItem('cliente_quiosque');
     safeStorage.removeItem('cliente_celular');
+    safeStorage.removeItem('cliente_session_start');
     setCart({});
     try {
       await offlineDB.clearOrderHistories();
@@ -1763,18 +1771,33 @@ export default function App() {
     const fetchLocalHistories = async () => {
       const cachedHistories = await offlineDB.getOrderHistories();
       
-      // Filter cached history list and include matching orders
+      // Filter cached history list and include matching orders from current session start
       const filteredCached = cachedHistories.filter(
-        (o) => (o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque)) && !o.pago
+        (o) => {
+          const isMatchingClient = o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque);
+          if (!isMatchingClient) return false;
+          
+          if (clienteSessionStart) {
+            return new Date(o.created_at).getTime() >= new Date(clienteSessionStart).getTime();
+          }
+          return !o.pago; // Fallback to avoid older paid ones if session start is missing
+        }
       );
 
-      // Combine with active orders
+      // Combine with active orders from current session start
       const matchingActive = orders.filter((o) => {
-        if (o.pago) return false;
+        let isMatchingClient = false;
         if (clienteCelular && o.cliente_telefone) {
-          return o.cliente_telefone === clienteCelular;
+          isMatchingClient = o.cliente_telefone === clienteCelular;
+        } else {
+          isMatchingClient = o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque;
         }
-        return o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque;
+        if (!isMatchingClient) return false;
+
+        if (clienteSessionStart) {
+          return new Date(o.created_at).getTime() >= new Date(clienteSessionStart).getTime();
+        }
+        return !o.pago; // Fallback to avoid older paid ones if session start is missing
       });
 
       // Unique-fy based on order ID
@@ -1791,7 +1814,7 @@ export default function App() {
     if (clienteNome && clienteQuiosque) {
       fetchLocalHistories();
     }
-  }, [orders, clienteNome, clienteQuiosque, clienteCelular]);
+  }, [orders, clienteNome, clienteQuiosque, clienteCelular, clienteSessionStart]);
 
   return (
     <div className="relative min-h-screen bg-[#FDFBF7] text-[#1A2E35] font-sans selection:bg-[#0077BE] selection:text-white pb-16">
