@@ -32,7 +32,9 @@ import {
   PieChart as PieIcon,
   User,
   UserPlus,
-  Users
+  Users,
+  Trophy,
+  Crown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
@@ -845,8 +847,63 @@ export function AdminPanel({
       return Object.entries(map)
         .map(([name, value]) => ({ name, Quantidade: value }))
         .sort((a, b) => b.Quantidade - a.Quantidade)
-        .slice(0, 8);
+        .slice(0, 10);
     };
+
+    // Calculate client visits ranking (quem mais visita o espaço)
+    const clientStatsMap: { 
+      [key: string]: { 
+        nome: string; 
+        telefone: string; 
+        quiosques: Set<string>; 
+        pedidosCount: number; 
+        totalSpent: number; 
+        lastVisit: string;
+      } 
+    } = {};
+
+    orders.forEach((o) => {
+      if (o.status === 'Cancelado') return;
+
+      const rawPhone = (o.cliente_telefone || '').replace(/\D/g, '');
+      const key = rawPhone || `name_${normalizeString(o.cliente_nome || 'Cliente Anônimo')}`;
+
+      if (!clientStatsMap[key]) {
+        clientStatsMap[key] = {
+          nome: o.cliente_nome || 'Cliente Anônimo',
+          telefone: o.cliente_telefone || '',
+          quiosques: new Set<string>(),
+          pedidosCount: 0,
+          totalSpent: 0,
+          lastVisit: o.created_at || ''
+        };
+      }
+
+      if (o.quiosque) {
+        clientStatsMap[key].quiosques.add(o.quiosque);
+      }
+      clientStatsMap[key].totalSpent += o.valor_final || 0;
+      clientStatsMap[key].pedidosCount += 1;
+
+      if (o.created_at && (!clientStatsMap[key].lastVisit || new Date(o.created_at) > new Date(clientStatsMap[key].lastVisit))) {
+        clientStatsMap[key].lastVisit = o.created_at;
+      }
+    });
+
+    // Cross-reference with registered clients list to get clean names/additional info
+    clientes.forEach((c) => {
+      const rawPhone = (c.celular || c.telefone || '').replace(/\D/g, '');
+      if (rawPhone && clientStatsMap[rawPhone]) {
+        clientStatsMap[rawPhone].nome = c.nome;
+      }
+    });
+
+    const clientRanking = Object.values(clientStatsMap)
+      .map((stat) => ({
+        ...stat,
+        quiosque: Array.from(stat.quiosques).join(', ') || 'Quiosque'
+      }))
+      .sort((a, b) => b.pedidosCount - a.pedidosCount || b.totalSpent - a.totalSpent);
 
     return {
       faturamentoDiario,
@@ -858,7 +915,8 @@ export function AdminPanel({
       topProductsToday: getSortedProducts(productSalesToday),
       topProducts7Days: getSortedProducts(productSales7Days),
       topProducts30Days: getSortedProducts(productSales30Days),
-      topProductsAllTime: getSortedProducts(productSalesAllTime)
+      topProductsAllTime: getSortedProducts(productSalesAllTime),
+      clientRanking
     };
   }, [orders]);
 
@@ -2405,14 +2463,18 @@ export function AdminPanel({
 
               {/* Top Products Table/List for quick scanning */}
               <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
-                <div>
-                  <h3 className="text-sm font-bold text-[#1B3322] font-serif">Ranking de Popularidade do Menu</h3>
-                  <p className="text-[10px] text-[#706558]">Detalhamento de quantidades vendidas acumuladas</p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1B3322] font-serif">Ranking de Popularidade do Menu (Top 10)</h3>
+                    <p className="text-[10px] text-[#706558]">Os 10 produtos mais vendidos ordenados por volume histórico</p>
+                  </div>
+                  <span className="text-[10px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-md font-bold">Top 10</span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
                       <tr className="border-b border-[#E3DCD2]">
+                        <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center w-12">Posição</th>
                         <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Produto</th>
                         <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Hoje</th>
                         <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Últimos 7 dias</th>
@@ -2421,48 +2483,168 @@ export function AdminPanel({
                       </tr>
                     </thead>
                     <tbody>
-                      {products.map((prod) => {
-                        const getQty = (arr: { name: string, Quantidade: number }[]) => 
-                          arr.find(item => item.name === prod.nome)?.Quantidade || 0;
+                      {products
+                        .map((prod) => {
+                          const getQty = (arr: { name: string; Quantidade: number }[]) =>
+                            arr.find((item) => item.name === prod.nome)?.Quantidade || 0;
 
-                        const todayQty = getQty(reportsStats.topProductsToday);
-                        const sevenQty = getQty(reportsStats.topProducts7Days);
-                        const thirtyQty = getQty(reportsStats.topProducts30Days);
-                        const allQty = getQty(reportsStats.topProductsAllTime);
+                          const todayQty = getQty(reportsStats.topProductsToday);
+                          const sevenQty = getQty(reportsStats.topProducts7Days);
+                          const thirtyQty = getQty(reportsStats.topProducts30Days);
+                          const allQty = getQty(reportsStats.topProductsAllTime);
 
-                        return (
-                          <tr key={prod.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
-                            <td className="py-3 text-xs font-bold text-[#1B3322] flex items-center gap-2">
-                              {prod.imagem ? (
-                                <img src={prod.imagem} alt={prod.nome} className="w-6 h-6 rounded-md object-cover border border-[#E3DCD2]" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-md bg-[#1E5E3A]/10 flex items-center justify-center text-[10px]">🥥</div>
-                              )}
-                              <span>{prod.nome}</span>
-                            </td>
-                            <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
-                              {todayQty > 0 ? (
-                                <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-bold">{todayQty}</span>
-                              ) : '-'}
-                            </td>
-                            <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
-                              {sevenQty > 0 ? (
-                                <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold">{sevenQty}</span>
-                              ) : '-'}
-                            </td>
-                            <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
-                              {thirtyQty > 0 ? (
-                                <span className="bg-slate-50 text-slate-700 px-2 py-0.5 rounded-full font-bold">{thirtyQty}</span>
-                              ) : '-'}
-                            </td>
-                            <td className="py-3 text-xs font-black text-[#1E5E3A] text-center font-mono">
-                              {allQty > 0 ? allQty : '-'}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                          return { prod, todayQty, sevenQty, thirtyQty, allQty };
+                        })
+                        .sort((a, b) => b.allQty - a.allQty)
+                        .slice(0, 10)
+                        .map(({ prod, todayQty, sevenQty, thirtyQty, allQty }, index) => {
+                          const isTop3 = index < 3;
+                          const badgeColors = [
+                            'bg-amber-100 text-amber-800 border border-amber-200',
+                            'bg-slate-100 text-slate-800 border border-slate-200',
+                            'bg-orange-100 text-orange-800 border border-orange-200'
+                          ];
+
+                          return (
+                            <tr key={prod.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
+                              <td className="py-3 text-center">
+                                {isTop3 ? (
+                                  <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full font-black text-[10px] ${badgeColors[index]}`}>
+                                    {index + 1}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-bold text-[#706558] font-mono">#{index + 1}</span>
+                                )}
+                              </td>
+                              <td className="py-3 text-xs font-bold text-[#1B3322] flex items-center gap-2">
+                                {prod.imagem ? (
+                                  <img src={prod.imagem} alt={prod.nome} className="w-6 h-6 rounded-md object-cover border border-[#E3DCD2]" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded-md bg-[#1E5E3A]/10 flex items-center justify-center text-[10px]">🥥</div>
+                                )}
+                                <span>{prod.nome}</span>
+                              </td>
+                              <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
+                                {todayQty > 0 ? (
+                                  <span className="bg-green-50 text-green-700 px-2 py-0.5 rounded-full font-bold">{todayQty}</span>
+                                ) : '-'}
+                              </td>
+                              <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
+                                {sevenQty > 0 ? (
+                                  <span className="bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full font-bold">{sevenQty}</span>
+                                ) : '-'}
+                              </td>
+                              <td className="py-3 text-xs font-semibold text-[#706558] text-center font-mono">
+                                {thirtyQty > 0 ? (
+                                  <span className="bg-slate-50 text-slate-700 px-2 py-0.5 rounded-full font-bold">{thirtyQty}</span>
+                                ) : '-'}
+                              </td>
+                              <td className="py-3 text-xs font-black text-[#1E5E3A] text-center font-mono">
+                                {allQty > 0 ? allQty : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
                     </tbody>
                   </table>
+                </div>
+              </div>
+
+              {/* Ranking de Clientes (Mais Ativos / Frequência de Visitas) */}
+              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#1B3322] font-serif flex items-center gap-2">
+                      <Trophy className="h-4 w-4 text-amber-500" />
+                      <span>Ranking de Visitas dos Clientes</span>
+                    </h3>
+                    <p className="text-[10px] text-[#706558]">Clientes que mais visitam e consomem no espaço (por número de pedidos)</p>
+                  </div>
+                  <span className="text-[10px] bg-[#1E5E3A]/10 text-[#1E5E3A] px-2 py-0.5 rounded-md font-bold">Fidelidade</span>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  {reportsStats.clientRanking.length === 0 ? (
+                    <div className="text-center py-8 space-y-2">
+                      <span className="text-2xl">👥</span>
+                      <p className="text-xs font-bold text-[#9C8E7B]">Nenhum histórico de visitas disponível ainda</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[#E3DCD2]">
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider w-12 text-center">Posição</th>
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Cliente</th>
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Contato / Celular</th>
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Quiosques Usados</th>
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Total de Pedidos (Visitas)</th>
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-right">Total Gasto (R$)</th>
+                          <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-right">Última Visita</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportsStats.clientRanking.slice(0, 15).map((client, index) => {
+                          const isTop3 = index < 3;
+                          const rankColors = [
+                            'bg-amber-100 text-amber-800 border border-amber-200',
+                            'bg-slate-100 text-slate-800 border border-slate-200',
+                            'bg-orange-100 text-orange-800 border border-orange-200'
+                          ];
+
+                          return (
+                            <tr key={index} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
+                              <td className="py-3 text-center">
+                                {isTop3 ? (
+                                  <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-xs ${rankColors[index]}`}>
+                                    {index === 0 ? <Crown className="h-3 w-3 mr-0.5 text-amber-600" /> : null}
+                                    {index + 1}
+                                  </span>
+                                ) : (
+                                  <span className="text-xs font-bold text-[#706558] font-mono">#{index + 1}</span>
+                                )}
+                              </td>
+                              <td className="py-3 text-xs font-bold text-[#1B3322]">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[#1E5E3A]">👤</span>
+                                  <span>{client.nome}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 text-xs text-[#706558] font-mono">
+                                {client.telefone ? (
+                                  <div className="flex items-center gap-1">
+                                    <Phone className="h-3 w-3 text-emerald-600" />
+                                    <span>{client.telefone}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-[#9C8E7B] italic">Não informado</span>
+                                )}
+                              </td>
+                              <td className="py-3 text-xs text-[#706558] text-center font-medium">
+                                {client.quiosque || '-'}
+                              </td>
+                              <td className="py-3 text-center">
+                                <span className="bg-[#1E5E3A]/10 text-[#1E5E3A] px-2.5 py-0.5 rounded-full text-xs font-black font-mono">
+                                  {client.pedidosCount} {client.pedidosCount === 1 ? 'pedido' : 'pedidos'}
+                                </span>
+                              </td>
+                              <td className="py-3 text-xs font-bold text-[#1E5E3A] text-right font-mono">
+                                R$ {client.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="py-3 text-[10px] text-[#706558] text-right font-medium">
+                                {client.lastVisit ? new Date(client.lastVisit).toLocaleDateString('pt-BR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                }) : '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>
