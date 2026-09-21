@@ -66,7 +66,8 @@ import {
   getSupabaseConfig,
   saveCustomSupabaseConfig,
   testSupabaseLiveConnection,
-  SupabaseConfigInfo
+  SupabaseConfigInfo,
+  upsertClienteSupabase
 } from '../lib/supabase';
 import { getApiUrl } from '../lib/api';
 
@@ -924,30 +925,25 @@ export function AdminPanel({
         c.nome.toLowerCase() === waiterOrderForm.cliente_nome.toLowerCase() &&
         c.quiosque.toLowerCase() === waiterOrderForm.quiosque.toLowerCase()
     );
-    if (!clientExists) {
-      const newClientData = {
-        nome: waiterOrderForm.cliente_nome.trim(),
-        quiosque: waiterOrderForm.quiosque.trim(),
-        celular: '',
-        telefone: '',
-        created_at: new Date().toISOString()
-      };
-      if (realSupabase && hasSupabaseConfig) {
-        try {
-          await realSupabase.from('clientes').insert(newClientData);
-        } catch (err) {
-          console.error('Error saving client to Supabase:', err);
-        }
+    if (!clientExists && waiterOrderForm.cliente_nome.trim()) {
+      const waiterPhone = 'mesa_' + waiterOrderForm.quiosque.trim().toLowerCase().replace(/\s+/g, '_');
+      if (onAddClient) {
+        onAddClient({
+          nome: waiterOrderForm.cliente_nome.trim(),
+          quiosque: waiterOrderForm.quiosque.trim(),
+          telefone: waiterPhone,
+          celular: waiterPhone,
+          status_conta: 'Conta em Aberto',
+          valor_total_conta: 0
+        });
       } else {
-        try {
-          await fetch(getApiUrl('/api/clients'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(newClientData)
-          });
-        } catch (err) {
-          console.error('Error saving client to local API:', err);
-        }
+        upsertClienteSupabase({
+          nome: waiterOrderForm.cliente_nome.trim(),
+          quiosque: waiterOrderForm.quiosque.trim(),
+          telefone: waiterPhone,
+          status_conta: 'Conta em Aberto',
+          valor_total_conta: 0
+        }).catch((e) => console.warn('Aviso salvando cliente garçom:', e));
       }
     }
 

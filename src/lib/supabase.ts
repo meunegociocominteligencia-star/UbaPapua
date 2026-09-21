@@ -152,6 +152,187 @@ export async function testSupabaseLiveConnection(): Promise<{
   }
 }
 
+/**
+ * Resilient Supabase persistence helper for 'clientes' table.
+ * Automatically adapts to schemas where 'celular' does not exist (using canonical 'telefone'),
+ * and self-heals by stripping non-existent columns if PostgREST returns PGRST204.
+ */
+export async function upsertClienteSupabase(cliente: {
+  nome: string;
+  quiosque: string;
+  telefone?: string;
+  celular?: string;
+  status_conta?: string;
+  valor_total_conta?: number;
+  created_at?: string;
+}): Promise<{ success: boolean; error?: string; data?: any }> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: 'Supabase não conectado' };
+
+  const rawPhone = (cliente.telefone || cliente.celular || '').trim();
+  if (!rawPhone) return { success: false, error: 'Telefone do cliente é obrigatório' };
+
+  // Canonical payload - never include 'celular' by default because the DB column is 'telefone'
+  let payload: Record<string, any> = {
+    telefone: rawPhone,
+    nome: cliente.nome.trim(),
+    quiosque: cliente.quiosque.trim(),
+    status_conta: cliente.status_conta || 'Conta em Aberto',
+    valor_total_conta: cliente.valor_total_conta !== undefined ? cliente.valor_total_conta : 0,
+    created_at: cliente.created_at || new Date().toISOString()
+  };
+
+  // Attempt upsert with self-healing column stripping on PGRST204
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      // Check if client exists by telefone
+      const { data: existing, error: findErr } = await supabase
+        .from('clientes')
+        .select('*')
+        .eq('telefone', rawPhone)
+        .limit(1);
+
+      if (findErr) {
+        if (findErr.code === '42P01') {
+          return { success: false, error: 'Tabela clientes não encontrada no Supabase (42P01)' };
+        }
+      }
+
+      if (existing && existing.length > 0) {
+        // Update
+        const upd = { ...payload };
+        delete upd.telefone; // Keep primary key unchanged
+        const { data, error } = await supabase
+          .from('clientes')
+          .update(upd)
+          .eq('telefone', rawPhone)
+          .select();
+
+        if (!error) {
+          return { success: true, data: data?.[0] };
+        }
+
+        // Check if a column was not found in schema cache (PGRST204)
+        if (error.code === 'PGRST204' || (error.message && error.message.includes('Could not find the'))) {
+          const match = error.message.match(/Could not find the '([^']+)' column/);
+          if (match && match[1]) {
+            delete payload[match[1]];
+            continue; // retry with stripped column
+          }
+        }
+
+        return { success: false, error: error.message };
+      } else {
+        // Insert
+        const { data, error } = await supabase
+          .from('clientes')
+          .insert(payload)
+          .select();
+
+        if (!error) {
+          return { success: true, data: data?.[0] };
+        }
+
+        // Self-heal on PGRST204
+        if (error.code === 'PGRST204' || (error.message && error.message.includes('Could not find the'))) {
+          const match = error.message.match(/Could not find the '([^']+)' column/);
+          if (match && match[1]) {
+            delete payload[match[1]];
+            continue;
+          }
+        }
+
+        // If duplicate key error (23505), update instead
+        if (error.code === '23505') {
+          const upd = { ...payload };
+          delete upd.telefone;
+          const { data: updData, error: updErr } = await supabase
+            .from('clientes')
+            .update(upd)
+            .eq('telefone', rawPhone)
+            .select();
+          if (!updErr) return { success: true, data: updData?.[0] };
+        }
+
+        return { success: false, error: error.message };
+      }
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  }
+
+  return { success: false, error: 'Falha ao persistir cliente após tentativas' };
+}
+
+/**
+ * Resilient update for clientes table
+ */
+export async function updateClienteSupabase(
+  telefoneOrId: string, 
+  cliente: {
+    nome?: string;
+    quiosque?: string;
+    telefone?: string;
+    celular?: string;
+    status_conta?: string;
+    valor_total_conta?: number;
+  }
+): Promise<{ success: boolean; error?: string; data?: any }> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: 'Supabase não conectado' };
+
+  const phone = (cliente.telefone || cliente.celular || telefoneOrId).trim();
+  let payload: Record<string, any> = {};
+  if (cliente.nome) payload.nome = cliente.nome.trim();
+  if (cliente.quiosque) payload.quiosque = cliente.quiosque.trim();
+  if (cliente.status_conta) payload.status_conta = cliente.status_conta;
+  if (cliente.valor_total_conta !== undefined) payload.valor_total_conta = cliente.valor_total_conta;
+
+  for (let attempt = 0; attempt < 4; attempt++) {
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .update(payload)
+        .eq('telefone', phone)
+        .select();
+
+      if (!error) return { success: true, data: data?.[0] };
+
+      if (error.code === 'PGRST204' || (error.message && error.message.includes('Could not find the'))) {
+        const match = error.message.match(/Could not find the '([^']+)' column/);
+        if (match && match[1]) {
+          delete payload[match[1]];
+          continue;
+        }
+      }
+      return { success: false, error: error.message };
+    } catch (err: any) {
+      return { success: false, error: err?.message || String(err) };
+    }
+  }
+  return { success: false, error: 'Falha ao atualizar cliente' };
+}
+
+/**
+ * Resilient delete for clientes table
+ */
+export async function deleteClienteSupabase(telefone: string): Promise<{ success: boolean; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { success: false, error: 'Supabase não conectado' };
+
+  try {
+    const { error } = await supabase
+      .from('clientes')
+      .delete()
+      .eq('telefone', telefone.trim());
+
+    if (error) return { success: false, error: error.message };
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || String(err) };
+  }
+}
+
 // SQL Script generator for the user's Supabase dashboard
 export const SUPABASE_SQL_SETUP = `-- SCRIPT DE MIGRAÇÃO SUPABASE
 -- Execute este script no SQL Editor do seu projeto do Supabase para criar as tabelas.
@@ -178,6 +359,16 @@ CREATE TABLE IF NOT EXISTS produtos (
 
 -- 3. Criar tabela de Clientes (Chave primária por telefone) de forma segura
 DO $$
+BEGIN
+  IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'clientes' AND table_schema = 'public') THEN
+    -- Garante que colunas adicionais existam se a tabela já foi criada anteriormente
+    ALTER TABLE clientes ADD COLUMN IF NOT EXISTS celular VARCHAR(50);
+    ALTER TABLE clientes ADD COLUMN IF NOT EXISTS status_conta VARCHAR(50) DEFAULT 'Conta em Aberto';
+    ALTER TABLE clientes ADD COLUMN IF NOT EXISTS valor_total_conta DECIMAL(10,2) DEFAULT 0.00;
+  END IF;
+EXCEPTION WHEN OTHERS THEN
+  NULL;
+END $$;
 BEGIN
   IF EXISTS (SELECT FROM information_schema.columns WHERE table_name = 'clientes' AND column_name = 'id') THEN
     ALTER TABLE clientes RENAME TO clientes_old;
