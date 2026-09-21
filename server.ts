@@ -413,13 +413,13 @@ let produtos = [
 const CONFIG_FILE_PATH = path.join(process.cwd(), 'config.json');
 
 let config = {
-  nome: 'Ubá Papuá',
-  logo: '🌴',
+  nome: 'Moju Park',
+  logo: '/moju-park-logo.svg',
   telefone: '(91) 98765-4321',
-  endereco: 'Orla de Belém, Quiosque Ubá Papuá - Belém/PA',
+  endereco: 'Parque Aquático Moju Park',
   taxa_servico: 10,
-  mensagem_inicial: 'Bem-vindo ao Ubá Papuá! Saboreie o melhor da culinária regional e petiscos deliciosos à beira-rio. Faça seu pedido diretamente aqui!',
-  horario_funcionamento: 'Terça a Domingo, das 11h às 22h'
+  mensagem_inicial: 'Bem-vindo ao Moju Park! Desfrute de momentos inesquecíveis no parque aquático. Faça seu pedido diretamente aqui!',
+  horario_funcionamento: 'Todos os dias, das 09h às 18h'
 };
 
 if (fs.existsSync(CONFIG_FILE_PATH)) {

@@ -7,30 +7,30 @@
   --font-serif: "Playfair Display", Georgia, serif;
 }
 
-/* Custom scrollbar matching the green and brown theme */
+/* Custom scrollbar matching the Moju Park light blue, dark blue and white theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #F4EFE6;
+  background: #F0F9FF;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(30, 94, 58, 0.3);
+  background: rgba(2, 132, 199, 0.35);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(30, 94, 58, 0.6);
+  background: rgba(15, 43, 92, 0.65);
 }
 
 /* Base styles */
 body {
   font-family: var(--font-sans);
-  background-color: #FCFBF9;
-  color: #1B3322;
+  background-color: #F8FAFC;
+  color: #0F172A;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -38,40 +38,40 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
 
-/* Delicate borders and artistic forest sand dividers */
+/* Crisp ocean dividers and backgrounds */
 .border-sand {
-  border-color: #E3DCD2;
+  border-color: #E2E8F0;
 }
 
 .bg-sand-light {
-  background-color: #FCFBF9;
+  background-color: #F8FAFC;
 }
 
 .bg-sand-medium {
-  background-color: #F4EFE6;
+  background-color: #F0F9FF;
 }
 
 .bg-sand-dark {
-  background-color: #E3DCD2;
+  background-color: #E2E8F0;
 }
 
 .text-navy {
-  color: #1B3322;
+  color: #0F2B5C;
 }
 
 .text-slate-muted {
-  color: #706558;
+  color: #475569;
 }
 
 .text-ocean {
-  color: #1E5E3A;
+  color: #0284C7;
 }
 
 .bg-ocean {
-  background-color: #1E5E3A;
+  background-color: #0284C7;
 }
 
-/* Subtle organic glow visual accent */
+/* Subtle organic water park glow visual accent */
 .artistic-glow {
   position: relative;
 }
@@ -80,7 +80,7 @@ h1, h2, h3, h4, h5, h6 {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  box-shadow: 0 0 24px 0 rgba(30, 94, 58, 0.08);
+  box-shadow: 0 0 24px 0 rgba(2, 132, 199, 0.15);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.35s ease;

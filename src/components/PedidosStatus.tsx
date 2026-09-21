@@ -21,6 +21,7 @@ interface PedidosStatusProps {
 export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, onCloseBill, onClearSession }: PedidosStatusProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [isDownloadingReceipt, setIsDownloadingReceipt] = useState(false);
 
   const activeUnpaidOrders = orders.filter(o => o.status !== 'Cancelado' && !o.pago);
   const activePaidOrders = orders.filter(o => o.status !== 'Cancelado' && o.pago);
@@ -31,6 +32,30 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
       setShowSuccessModal(true);
     }
   }, [isAllPaid]);
+
+  const handleDownloadAndClear = () => {
+    setIsDownloadingReceipt(true);
+    try {
+      generateReceiptPDF(activePaidOrders, 'Recibo Completo de Consumo');
+    } catch (e) {
+      console.error('Error generating PDF:', e);
+    }
+
+    setTimeout(() => {
+      setIsDownloadingReceipt(false);
+      setShowSuccessModal(false);
+      if (onClearSession) {
+        onClearSession();
+      }
+    }, 1200);
+  };
+
+  const handleDeclineAndClear = () => {
+    setShowSuccessModal(false);
+    if (onClearSession) {
+      onClearSession();
+    }
+  };
 
   const steps: { label: OrderStatus; desc: string; color: string }[] = [
     { label: 'Recebido', desc: 'Pedido enviado para a cozinha', color: 'sky' },
@@ -105,18 +130,24 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
 
       // Header
       doc.setFont('helvetica', 'bold');
-      doc.setFontSize(12);
-      doc.setTextColor(27, 51, 34); // #1B3322 dark green
-      doc.text('BARRACA & QUIOSQUE', width / 2, y, { align: 'center' });
+      doc.setFontSize(14);
+      doc.setTextColor(15, 43, 92); // #0F2B5C dark blue
+      doc.text('MOJU PARK', width / 2, y, { align: 'center' });
       
       y += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(2, 132, 199); // #0284C7 light blue
+      doc.text('PARQUE AQUÁTICO', width / 2, y, { align: 'center' });
+
+      y += 4.5;
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.setTextColor(112, 101, 88); // #706558
+      doc.setTextColor(100, 116, 139); // #64748B
       doc.text(title, width / 2, y, { align: 'center' });
 
-      y += 6;
-      doc.setDrawColor(227, 220, 210); // #E3DCD2 border color
+      y += 5;
+      doc.setDrawColor(186, 230, 253); // #BAE6FD light blue border
       doc.setLineWidth(0.3);
       doc.line(margin, y, width - margin, y);
 
@@ -225,7 +256,22 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
       doc.text('CONTA PAGA E CONFIRMADA', width / 2, y, { align: 'center' });
 
       const fileName = `recibo_conta_${clientName.toLowerCase().replace(/\s+/g, '_')}_${kiosk.toLowerCase().replace(/\s+/g, '_')}.pdf`;
-      doc.save(fileName);
+      try {
+        doc.save(fileName);
+      } catch (saveErr) {
+        console.warn('doc.save error, using blob fallback:', saveErr);
+        const blob = doc.output('blob');
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 1000);
+      }
     } catch (err) {
       console.error('Failed to generate receipt PDF:', err);
       alert('Não foi possível gerar o comprovante em PDF.');
@@ -233,24 +279,24 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
   };
 
   return (
-    <div id="orders-status-screen" className="min-h-screen bg-[#FDFBF7] pb-32 text-[#1A2E35] p-4">
+    <div id="orders-status-screen" className="min-h-screen bg-[#F8FAFC] pb-32 text-[#0F2B5C] p-4 font-sans">
       {/* Interactive payment success / receipt download prompt modal */}
       {showSuccessModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1A2E35]/45 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F2B5C]/50 backdrop-blur-md">
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="w-full max-w-sm bg-[#FDFBF7] border-2 border-emerald-500 rounded-[36px] p-6 text-center shadow-2xl space-y-6"
+            className="w-full max-w-sm bg-white border-2 border-[#0284C7] rounded-[36px] p-6 text-center shadow-2xl space-y-6"
           >
-            <div className="mx-auto w-16 h-16 bg-emerald-50 border border-emerald-100 rounded-full flex items-center justify-center text-3xl">
+            <div className="mx-auto w-16 h-16 bg-sky-50 border border-sky-100 rounded-full flex items-center justify-center text-3xl shadow-inner">
               🎉
             </div>
             
             <div className="space-y-2">
-              <h3 className="text-lg font-serif italic font-bold text-[#1A2E35]">
+              <h3 className="text-lg font-serif italic font-bold text-[#0F2B5C]">
                 Sua conta foi paga!
               </h3>
-              <p className="text-xs text-[#5C6B73] leading-relaxed">
+              <p className="text-xs text-[#64748B] leading-relaxed">
                 Deseja baixar o comprovante de consumo em PDF no seu celular?
               </p>
             </div>
@@ -258,28 +304,28 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
             <div className="flex flex-col gap-3 pt-2">
               <button
                 type="button"
-                onClick={() => {
-                  generateReceiptPDF(activePaidOrders, 'Recibo Completo de Consumo');
-                  if (onClearSession) {
-                    onClearSession();
-                  }
-                  setShowSuccessModal(false);
-                }}
-                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+                disabled={isDownloadingReceipt}
+                onClick={handleDownloadAndClear}
+                className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] disabled:opacity-75"
               >
-                <Download className="h-4 w-4" />
-                <span>Sim, baixar em PDF</span>
+                {isDownloadingReceipt ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 animate-spin" />
+                    <span>Baixando PDF...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    <span>Sim, baixar em PDF</span>
+                  </>
+                )}
               </button>
 
               <button
                 type="button"
-                onClick={() => {
-                  if (onClearSession) {
-                    onClearSession();
-                  }
-                  setShowSuccessModal(false);
-                }}
-                className="w-full py-3.5 bg-[#F5F2ED] hover:bg-[#E8E2D9] text-[#5C6B73] border border-[#E8E2D9] font-bold text-xs rounded-2xl transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                disabled={isDownloadingReceipt}
+                onClick={handleDeclineAndClear}
+                className="w-full py-3.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-[#64748B] hover:text-[#0F2B5C] border border-[#E2E8F0] font-bold text-xs rounded-2xl transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
               >
                 Não, apenas limpar tela
               </button>
@@ -327,7 +373,7 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
 
         {orders.length === 0 ? (
           <div className="py-16 text-center space-y-4 bg-white border border-[#E8E2D9] rounded-[32px] p-8 shadow-sm">
-            <div className="text-5xl">🥥</div>
+            <div className="text-5xl">🌊</div>
             <h4 className="text-sm font-bold text-[#A89F91]">Nenhum pedido feito ainda</h4>
             <p className="text-xs text-[#5C6B73] max-w-xs mx-auto leading-relaxed">
               Seus pedidos concluídos nesta sessão serão exibidos em tempo real aqui. Toque no botão acima para escolher algo gostoso!
@@ -519,27 +565,27 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
             const isAllPaid = activeUnpaidOrders.length === 0 && activePaidOrders.length > 0;
 
             return (
-              <div className={`bg-[#FCFBF9] border-t-4 ${isAllPaid ? 'border-emerald-500' : isBillAlreadyRequested ? 'border-amber-500' : 'border-[#0077BE]'} border border-[#E8E2D9] rounded-[32px] p-5 shadow-sm space-y-4 mt-8`}>
+              <div className={`bg-white border-t-4 ${isAllPaid ? 'border-emerald-500' : isBillAlreadyRequested ? 'border-amber-500' : 'border-[#0284C7]'} border border-[#E2E8F0] rounded-[32px] p-5 shadow-sm space-y-4 mt-8`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="text-xs font-black text-[#A89F91] uppercase tracking-widest">Resumo de Consumo</h4>
-                    <p className="text-[10px] text-[#5C6B73]">
+                    <h4 className="text-xs font-black text-[#64748B] uppercase tracking-widest">Resumo de Consumo</h4>
+                    <p className="text-[10px] text-[#64748B]">
                       {isAllPaid ? 'Sua conta foi finalizada com sucesso!' : 'Soma de todos os seus pedidos ativos'}
                     </p>
                   </div>
                   <div className="text-right">
-                    <span className="text-[9px] text-[#A89F91] block uppercase font-bold">
+                    <span className="text-[9px] text-[#64748B] block uppercase font-bold">
                       {isAllPaid ? 'Total Pago' : 'Total Pendente'}
                     </span>
-                    <span className={`text-base font-extrabold ${isAllPaid ? 'text-emerald-600' : 'text-[#0077BE]'}`}>
+                    <span className={`text-base font-extrabold ${isAllPaid ? 'text-emerald-600' : 'text-[#0284C7]'}`}>
                       R$ {(isAllPaid ? totalPaidAmount : totalUnpaidAmount).toFixed(2)}
                     </span>
                   </div>
                 </div>
 
                 {/* Status da Conta Indicator */}
-                <div className="flex items-center justify-between bg-[#F5F2ED] rounded-xl px-4 py-2.5 text-xs font-semibold text-[#1A2E35]">
-                  <span className="text-[10px] uppercase font-bold text-[#A89F91]">Status da Conta:</span>
+                <div className="flex items-center justify-between bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl px-4 py-2.5 text-xs font-semibold text-[#0F2B5C]">
+                  <span className="text-[10px] uppercase font-bold text-[#64748B]">Status da Conta:</span>
                   <span className={`text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider ${
                     isAllPaid 
                       ? 'bg-emerald-50 border border-emerald-200 text-emerald-700'
@@ -563,7 +609,7 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                     className={`w-full py-3.5 rounded-2xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-2 ${
                       isBillAlreadyRequested
                         ? 'bg-amber-50 border border-amber-200 text-amber-700 opacity-90 cursor-not-allowed'
-                        : 'bg-[#0077BE] hover:bg-[#005B94] text-white shadow-md hover:shadow-lg'
+                        : 'bg-[#0284C7] hover:bg-[#0369A1] text-white shadow-md hover:shadow-lg'
                     }`}
                   >
                     {isBillAlreadyRequested ? (
@@ -584,13 +630,13 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
 
                 {isAllPaid && (
                   <div className="space-y-3">
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-center py-3 rounded-2xl text-[11px] font-bold">
-                      Obrigado pela preferência! Volte sempre! 😊
+                    <div className="bg-sky-50 border border-sky-200 text-sky-900 text-center py-3 rounded-2xl text-[11px] font-bold">
+                      Obrigado pela preferência no Moju Park! Volte sempre! 😊
                     </div>
                     <button
                       type="button"
                       onClick={() => generateReceiptPDF(activePaidOrders, 'Recibo Completo de Consumo')}
-                      className="w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+                      className="w-full py-3.5 bg-[#0F2B5C] hover:bg-[#1E3A8A] text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <FileText className="h-4 w-4" />
                       <span>📥 Baixar Comprovante Completo (PDF)</span>
@@ -598,7 +644,7 @@ export function PedidosStatus({ orders, onBackToMenu, onRefresh, onCancelOrder, 
                     {onClearSession && (
                       <button
                         onClick={onClearSession}
-                        className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
+                        className="w-full py-3.5 bg-[#0284C7] hover:bg-[#0369A1] text-white font-extrabold text-xs rounded-2xl transition-all cursor-pointer flex items-center justify-center gap-2 shadow-md hover:shadow-lg hover:scale-[1.01] active:scale-[0.99]"
                       >
                         🔄 Iniciar Novo Atendimento (Limpar Pedidos)
                       </button>

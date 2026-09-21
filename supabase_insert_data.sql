@@ -1,5 +1,5 @@
 -- ====================================================================
--- SCRIPT DE CRIAÇÃO E INSERÇÃO DO CARDÁPIO UBÁ PAPUÁ NO SUPABASE
+-- SCRIPT DE CRIAÇÃO E INSERÇÃO DO CARDÁPIO MOJU PARK NO SUPABASE
 -- ====================================================================
 -- Instruções:
 -- 1. Acesse o seu painel do Supabase (https://supabase.com)
@@ -79,7 +79,7 @@ CREATE POLICY "Acesso público pedido_itens" ON pedido_itens FOR ALL USING (true
 
 
 -- ====================================================================
--- POPULAR AS CATEGORIAS DO CARDÁPIO UBÁ PAPUÁ
+-- POPULAR AS CATEGORIAS DO CARDÁPIO MOJU PARK
 -- ====================================================================
 INSERT INTO categorias (nome) VALUES 
   ('Refeições'), 
@@ -92,7 +92,7 @@ ON CONFLICT (nome) DO NOTHING;
 
 
 -- ====================================================================
--- POPULAR OS PRODUTOS DO CARDÁPIO UBÁ PAPUÁ
+-- POPULAR OS PRODUTOS DO CARDÁPIO MOJU PARK
 -- ====================================================================
 INSERT INTO produtos (nome, descricao, categoria, preco, imagem, ativo, ordem) VALUES 
   -- --- REFEIÇÕES (Serve 02 pessoas) ---
@@ -167,6 +167,6 @@ CREATE POLICY "Acesso público config_estabelecimento" ON config_estabelecimento
 
 -- Inserir as configurações iniciais se não existirem
 INSERT INTO config_estabelecimento (id, nome, logo, telefone, endereco, taxa_servico, mensagem_inicial, horario_funcionamento) VALUES
-  (1, 'Ubá Papuá', '🌴', '(91) 98765-4321', 'Orla de Belém, Quiosque Ubá Papuá - Belém/PA', 10, 'Bem-vindo ao Ubá Papuá! Saboreie o melhor da culinária regional e petiscos deliciosos à beira-rio. Faça seu pedido diretamente aqui!', 'Terça a Domingo, das 11h às 22h')
+  (1, 'Moju Park', '/moju-park-logo.svg', '(91) 98765-4321', 'Parque Aquático Moju Park', 10, 'Bem-vindo ao Moju Park! Desfrute de momentos inesquecíveis no parque aquático. Faça seu pedido diretamente aqui!', 'Todos os dias, das 09h às 18h')
 ON CONFLICT (id) DO NOTHING;
 

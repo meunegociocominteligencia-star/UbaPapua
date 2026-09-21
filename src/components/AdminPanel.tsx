@@ -1333,18 +1333,20 @@ export function AdminPanel({
 
   if (adminUser === null) {
     return (
-      <div className="min-h-screen bg-[#FCFBF9] text-[#1B3322] flex items-center justify-center p-6 font-sans">
+      <div className="min-h-screen bg-[#F8FAFC] text-[#0F2B5C] flex items-center justify-center p-6 font-sans">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="max-w-md w-full bg-white border border-[#E3DCD2] rounded-[32px] p-8 space-y-6 shadow-xl"
+          className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-[32px] p-8 space-y-6 shadow-xl"
         >
           {/* Logo & Header */}
           <div className="text-center space-y-2">
-            <div className="text-5xl animate-bounce duration-1000">🌴</div>
-            <h1 className="text-2xl font-serif italic font-bold text-[#1E5E3A]">{config.nome || 'Ubá Papuá'}</h1>
-            <p className="text-xs font-semibold text-[#9C8E7B] uppercase tracking-wider">Acesso Restrito</p>
-            <p className="text-xs text-[#706558]">Garçons e Administradores</p>
+            <div className="w-32 h-16 mx-auto flex items-center justify-center p-2 rounded-2xl bg-white border border-[#BAE6FD] shadow-sm mb-2">
+              <img src="/moju-park-logo.svg" alt="Moju Park" className="w-full h-full object-contain" />
+            </div>
+            <h1 className="text-2xl font-serif italic font-bold text-[#0F2B5C]">{config.nome || 'Moju Park'}</h1>
+            <p className="text-xs font-semibold text-[#0284C7] uppercase tracking-wider">Acesso Restrito</p>
+            <p className="text-xs text-[#64748B]">Garçons e Administradores</p>
           </div>
 
           {/* Form */}
@@ -1357,7 +1359,7 @@ export function AdminPanel({
                 onChange={(e) => setUsernameInput(e.target.value)}
                 placeholder="Ex: admin ou garcom"
                 required
-                className="w-full px-4 py-3 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] placeholder-[#A89F91] focus:ring-2 focus:ring-[#1E5E3A]/20 focus:border-[#1E5E3A] outline-none transition-all"
+                className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#0F2B5C] placeholder-[#A89F91] focus:ring-2 focus:ring-[#0284C7]/20 focus:border-[#0284C7] outline-none transition-all"
               />
             </div>
 
@@ -1369,7 +1371,7 @@ export function AdminPanel({
                 onChange={(e) => setPasswordInput(e.target.value)}
                 placeholder="Digite sua senha"
                 required
-                className="w-full px-4 py-3 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] placeholder-[#A89F91] focus:ring-2 focus:ring-[#1E5E3A]/20 focus:border-[#1E5E3A] outline-none transition-all"
+                className="w-full px-4 py-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#0F2B5C] placeholder-[#A89F91] focus:ring-2 focus:ring-[#0284C7]/20 focus:border-[#0284C7] outline-none transition-all"
               />
             </div>
 
@@ -1381,7 +1383,7 @@ export function AdminPanel({
 
             <button
               type="submit"
-              className="w-full py-3 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-green-100/50 uppercase tracking-wider flex items-center justify-center gap-2"
+              className="w-full py-3 bg-[#0284C7] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-md shadow-sky-100/50 uppercase tracking-wider flex items-center justify-center gap-2"
             >
               <span>Autenticar</span>
             </button>
@@ -1390,7 +1392,7 @@ export function AdminPanel({
           {/* Back button */}
           <button
             onClick={onClose}
-            className="w-full py-2.5 bg-white border border-[#E3DCD2] hover:bg-[#FCFBF9] text-[#706558] hover:text-[#1B3322] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
+            className="w-full py-2.5 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#706558] hover:text-[#0F2B5C] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Voltar ao Cardápio</span>
@@ -1401,21 +1403,21 @@ export function AdminPanel({
   }
 
   return (
-    <div id="admin-panel-container" className="min-h-screen bg-[#FCFBF9] text-[#1B3322] flex flex-col md:flex-row pb-12">
+    <div id="admin-panel-container" className="min-h-screen bg-[#F8FAFC] text-[#0F2B5C] flex flex-col md:flex-row pb-12">
       {/* Navigation Sidebar */}
-      <aside className="w-full md:w-64 bg-[#F4EFE6] border-b md:border-b-0 md:border-r border-[#E3DCD2] flex flex-col justify-between flex-shrink-0">
+      <aside className="w-full md:w-64 bg-[#F0F9FF] border-b md:border-b-0 md:border-r border-[#E2E8F0] flex flex-col justify-between flex-shrink-0">
         <div className="p-6">
-          <div className="flex items-center gap-3 border-b border-[#E3DCD2] pb-5 mb-5 justify-between">
+          <div className="flex items-center gap-3 border-b border-[#E2E8F0] pb-5 mb-5 justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-[#FCFBF9] border border-[#E3DCD2] flex items-center justify-center overflow-hidden text-lg">
-                {config.logo && (config.logo.startsWith('http') || config.logo.startsWith('data:image')) ? (
-                  <img src={config.logo} alt="Logo" className="w-full h-full object-cover" />
+              <div className="w-10 h-8 rounded-xl bg-white border border-[#BAE6FD] flex items-center justify-center overflow-hidden p-0.5 shadow-sm">
+                {config.logo && (config.logo.startsWith('http') || config.logo.startsWith('data:image') || config.logo.startsWith('/') || config.logo.includes('.svg') || config.logo.includes('.png')) ? (
+                  <img src={config.logo} alt="Logo" className="w-full h-full object-contain" />
                 ) : (
-                  config.logo || '🥥'
+                  <span className="text-base">{config.logo || '🌊'}</span>
                 )}
               </div>
               <div>
-                <h2 className="text-sm font-serif font-bold italic tracking-tight text-[#1B3322]">Dashboard</h2>
+                <h2 className="text-sm font-serif font-bold italic tracking-tight text-[#0F2B5C]">Dashboard</h2>
                 <p className="text-[10px] text-[#9C8E7B]">Gestão do Estabelecimento</p>
               </div>
             </div>
@@ -1429,7 +1431,7 @@ export function AdminPanel({
               </button>
               <button
                 onClick={onClose}
-                className="md:hidden p-2 rounded-xl bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322]"
+                className="md:hidden p-2 rounded-xl bg-white border border-[#E2E8F0] text-[#706558] hover:text-[#0F2B5C]"
               >
                 <ArrowLeft className="h-4 w-4" />
               </button>
@@ -1441,8 +1443,8 @@ export function AdminPanel({
               onClick={() => setActiveTab('orders')}
               className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                 activeTab === 'orders'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                  : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
               }`}
             >
               <ShoppingBag className="h-4 w-4" />
@@ -1460,8 +1462,8 @@ export function AdminPanel({
                   onClick={() => setActiveTab('products')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                     activeTab === 'products'
-                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                      ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                      : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
                   }`}
                 >
                   <Coffee className="h-4 w-4" />
@@ -1472,8 +1474,8 @@ export function AdminPanel({
                   onClick={() => setActiveTab('categories')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                     activeTab === 'categories'
-                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                      ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                      : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
                   }`}
                 >
                   <ChevronDown className="h-4 w-4" />
@@ -1484,8 +1486,8 @@ export function AdminPanel({
                   onClick={() => setActiveTab('reports')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                     activeTab === 'reports'
-                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                      ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                      : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
                   }`}
                 >
                   <BarChart3 className="h-4 w-4" />
@@ -1498,8 +1500,8 @@ export function AdminPanel({
               onClick={() => setActiveTab('clientes')}
               className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                 activeTab === 'clientes'
-                  ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                  : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                  ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                  : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
               }`}
             >
               <Phone className="h-4 w-4" />
@@ -1517,8 +1519,8 @@ export function AdminPanel({
                   onClick={() => setActiveTab('team')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                     activeTab === 'team'
-                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                      ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                      : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
                   }`}
                 >
                   <Users className="h-4 w-4" />
@@ -1529,8 +1531,8 @@ export function AdminPanel({
                   onClick={() => setActiveTab('settings')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                     activeTab === 'settings'
-                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                      ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                      : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
                   }`}
                 >
                   <Settings className="h-4 w-4" />
@@ -1541,8 +1543,8 @@ export function AdminPanel({
                   onClick={() => setActiveTab('supabase')}
                   className={`w-full px-4 py-3 rounded-xl font-bold text-xs flex items-center gap-3 transition-all cursor-pointer ${
                     activeTab === 'supabase'
-                      ? 'bg-[#1E5E3A] text-white shadow-sm shadow-green-100'
-                      : 'text-[#706558] hover:text-[#1B3322] hover:bg-[#E3DCD2]/30'
+                      ? 'bg-[#0284C7] text-white shadow-sm shadow-sky-100'
+                      : 'text-[#706558] hover:text-[#0F2B5C] hover:bg-[#E2E8F0]/30'
                   }`}
                 >
                   <Database className="h-4 w-4" />
@@ -1562,7 +1564,7 @@ export function AdminPanel({
           </nav>
         </div>
 
-        <div className="p-6 border-t border-[#E3DCD2] space-y-2 hidden md:block">
+        <div className="p-6 border-t border-[#E2E8F0] space-y-2 hidden md:block">
           <button
             onClick={handleAdminLogout}
             className="w-full py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2"
@@ -1571,7 +1573,7 @@ export function AdminPanel({
           </button>
           <button
             onClick={onClose}
-            className="w-full py-2 bg-white border border-[#E3DCD2] hover:bg-[#FCFBF9] text-[#1B3322] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
+            className="w-full py-2 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] text-[#0F2B5C] font-bold text-xs rounded-xl transition-all cursor-pointer text-center flex items-center justify-center gap-2 shadow-sm"
           >
             <ArrowLeft className="h-4 w-4" />
             <span>Voltar ao Cardápio</span>
@@ -1583,43 +1585,43 @@ export function AdminPanel({
       <main className="flex-1 p-6 md:p-8 max-w-5xl mx-auto w-full space-y-8">
         {/* Statistics Widgets Banner */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white border border-[#E3DCD2] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
-            <div className="w-10 h-10 rounded-xl bg-[#1E5E3A]/10 flex items-center justify-center text-[#1E5E3A] flex-shrink-0">
+          <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
+            <div className="w-10 h-10 rounded-xl bg-[#0284C7]/10 flex items-center justify-center text-[#0284C7] flex-shrink-0">
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
               <p className="text-[10px] font-semibold text-[#9C8E7B] uppercase">Faturamento de Hoje</p>
-              <h3 className="text-base font-extrabold text-[#1E5E3A]">R$ {stats.salesTotal.toFixed(2)}</h3>
+              <h3 className="text-base font-extrabold text-[#0284C7]">R$ {stats.salesTotal.toFixed(2)}</h3>
             </div>
           </div>
 
-          <div className="bg-white border border-[#E3DCD2] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
+          <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600 flex-shrink-0">
               <Clock className="h-5 w-5 animate-pulse" />
             </div>
             <div>
               <p className="text-[10px] font-semibold text-[#9C8E7B] uppercase">Pedidos em Preparo</p>
-              <h3 className="text-base font-extrabold text-[#1B3322]">{stats.prepCount}</h3>
+              <h3 className="text-base font-extrabold text-[#0F2B5C]">{stats.prepCount}</h3>
             </div>
           </div>
 
-          <div className="bg-white border border-[#E3DCD2] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
+          <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
               <CheckCircle className="h-5 w-5" />
             </div>
             <div>
               <p className="text-[10px] font-semibold text-[#9C8E7B] uppercase">Pedidos Entregues</p>
-              <h3 className="text-base font-extrabold text-[#1B3322]">{stats.deliveredCount}</h3>
+              <h3 className="text-base font-extrabold text-[#0F2B5C]">{stats.deliveredCount}</h3>
             </div>
           </div>
 
-          <div className="bg-white border border-[#E3DCD2] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
+          <div className="bg-white border border-[#E2E8F0] p-4 rounded-2xl flex items-center gap-3.5 shadow-sm">
             <div className="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 flex-shrink-0">
               <AlertCircle className="h-5 w-5" />
             </div>
             <div>
               <p className="text-[10px] font-semibold text-[#9C8E7B] uppercase">Pedidos Pendentes</p>
-              <h3 className="text-base font-extrabold text-[#1B3322]">{stats.pendingCount}</h3>
+              <h3 className="text-base font-extrabold text-[#0F2B5C]">{stats.pendingCount}</h3>
             </div>
           </div>
         </div>
@@ -1628,9 +1630,9 @@ export function AdminPanel({
         <div className="space-y-6">
           {activeTab === 'orders' && (
             <div className="space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E3DCD2] pb-3 gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-[#E2E8F0] pb-3 gap-3">
                 <div>
-                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Painel de Pedidos em Tempo Real</h2>
+                  <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Painel de Pedidos em Tempo Real</h2>
                   <p className="text-xs text-[#706558]">Ordene e atualize o status dos pedidos instantaneamente</p>
                 </div>
                 <div className="flex items-center gap-2 flex-wrap shrink-0 self-start sm:self-center">
@@ -1660,7 +1662,7 @@ export function AdminPanel({
                       });
                       setIsAddingOrder(true);
                     }}
-                    className="bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
+                    className="bg-[#0284C7] hover:bg-opacity-95 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all cursor-pointer shadow-md flex items-center justify-center gap-2"
                   >
                     <Plus className="h-4 w-4" />
                     <span>Lançar Venda (Garçom)</span>
@@ -1669,7 +1671,7 @@ export function AdminPanel({
               </div>
 
               {orders.length === 0 ? (
-                <div className="bg-white border border-[#E3DCD2] rounded-[32px] p-12 text-center space-y-3 shadow-sm">
+                <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-12 text-center space-y-3 shadow-sm">
                   <div className="text-4xl">🥥</div>
                   <h4 className="text-sm font-bold text-[#9C8E7B]">Nenhum pedido recebido ainda</h4>
                   <p className="text-xs text-[#706558] max-w-xs mx-auto">
@@ -1691,16 +1693,16 @@ export function AdminPanel({
                           ? 'border-amber-200 bg-amber-50/25'
                           : order.status === 'Pronto'
                           ? 'border-emerald-200 bg-emerald-50/25'
-                          : 'border-[#E3DCD2] bg-[#FCFBF9]'
+                          : 'border-[#E2E8F0] bg-[#F8FAFC]'
                       }`}
                     >
                       <div className="flex flex-col md:flex-row gap-4 justify-between items-start">
                         {/* Order info */}
                         <div className="space-y-2 flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-[#1B3322] font-serif">{order.cliente_nome}</span>
+                            <span className="font-bold text-sm text-[#0F2B5C] font-serif">{order.cliente_nome}</span>
                             <span className="text-[#9C8E7B]">•</span>
-                            <span className="font-extrabold text-xs text-[#1E5E3A] bg-[#F4EFE6] px-2.5 py-0.5 rounded-lg border border-[#E3DCD2]">
+                            <span className="font-extrabold text-xs text-[#0284C7] bg-[#F0F9FF] px-2.5 py-0.5 rounded-lg border border-[#E2E8F0]">
                               {order.quiosque}
                             </span>
                             {order.conta_solicitada && order.status !== 'Entregue' && order.status !== 'Cancelado' && (
@@ -1715,12 +1717,12 @@ export function AdminPanel({
                           </div>
 
                           {/* Items list */}
-                          <div className="bg-[#FCFBF9] rounded-xl p-3 border border-[#E3DCD2] max-w-xl">
+                          <div className="bg-[#F8FAFC] rounded-xl p-3 border border-[#E2E8F0] max-w-xl">
                             <ul className="space-y-1 text-xs">
                               {order.itens.map((item: any, idx: number) => (
-                                <li key={idx} className="flex items-center justify-between text-[#1B3322]">
+                                <li key={idx} className="flex items-center justify-between text-[#0F2B5C]">
                                   <span>
-                                    <strong className="text-[#1E5E3A]">{item.quantidade}x</strong> {item.produto_nome}
+                                    <strong className="text-[#0284C7]">{item.quantidade}x</strong> {item.produto_nome}
                                   </span>
                                   <span className="text-[#706558]">R$ {(item.valor * item.quantidade).toFixed(2)}</span>
                                 </li>
@@ -1735,8 +1737,8 @@ export function AdminPanel({
 
                           <div className="text-xs font-semibold text-[#706558] flex items-center gap-1.5 pl-0.5">
                             <span>Subtotal: R$ {order.valor_total.toFixed(2)}</span>
-                            <span className="text-[#E3DCD2]">|</span>
-                            <span className="text-[#1E5E3A] font-extrabold">Total Geral (c/ taxa): R$ {order.valor_final.toFixed(2)}</span>
+                            <span className="text-[#E2E8F0]">|</span>
+                            <span className="text-[#0284C7] font-extrabold">Total Geral (c/ taxa): R$ {order.valor_final.toFixed(2)}</span>
                           </div>
                         </div>
 
@@ -1749,12 +1751,12 @@ export function AdminPanel({
                                 order.status === 'Cancelado'
                                   ? 'bg-red-50 text-red-700'
                                   : order.status === 'Entregue'
-                                  ? 'bg-[#F4EFE6] text-[#706558] border border-[#E3DCD2]'
+                                  ? 'bg-[#F0F9FF] text-[#706558] border border-[#E2E8F0]'
                                   : order.status === 'Pronto'
                                   ? 'bg-emerald-50 text-emerald-700 animate-pulse'
                                   : order.status === 'Em preparo'
                                   ? 'bg-amber-50 text-amber-700'
-                                  : 'bg-green-50 text-[#1E5E3A]'
+                                  : 'bg-green-50 text-[#0284C7]'
                               }`}
                             >
                               {order.status}
@@ -1765,7 +1767,7 @@ export function AdminPanel({
                             {order.status === 'Recebido' && (
                               <button
                                 onClick={() => onUpdateOrderStatus(order.id, 'Em preparo')}
-                                className="flex-1 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-[10px] px-3 py-2.5 rounded-xl uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-green-100"
+                                className="flex-1 bg-[#0284C7] hover:bg-opacity-95 text-white font-bold text-[10px] px-3 py-2.5 rounded-xl uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-sky-100"
                               >
                                 Aceitar / Preparar
                               </button>
@@ -1783,7 +1785,7 @@ export function AdminPanel({
                             {order.status === 'Pronto' && (
                               <button
                                 onClick={() => onUpdateOrderStatus(order.id, 'Entregue')}
-                                className="flex-1 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-[10px] px-3 py-2.5 rounded-xl uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-green-100"
+                                className="flex-1 bg-[#0284C7] hover:bg-opacity-95 text-white font-bold text-[10px] px-3 py-2.5 rounded-xl uppercase tracking-wider transition-all cursor-pointer shadow-sm shadow-sky-100"
                               >
                                 Marcar Entregue
                               </button>
@@ -1822,9 +1824,9 @@ export function AdminPanel({
 
           {activeTab === 'clientes' && (
             <div className="space-y-4">
-              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
                 <div>
-                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Clientes Cadastrados</h2>
+                  <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Clientes Cadastrados</h2>
                   <p className="text-xs text-[#706558]">Lista de todos os clientes identificados e registrados no banco de dados</p>
                 </div>
                 {onRefreshData && (
@@ -1840,16 +1842,16 @@ export function AdminPanel({
                       }
                     }}
                     disabled={isRefreshing}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] border border-[#E3DCD2] rounded-xl text-[#1B3322] font-bold text-xs transition-all disabled:opacity-50 cursor-pointer shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-[#F0F9FF] hover:bg-[#E2E8F0] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] font-bold text-xs transition-all disabled:opacity-50 cursor-pointer shadow-sm"
                   >
-                    <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-[#1E5E3A]' : ''}`} />
+                    <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-[#0284C7]' : ''}`} />
                     <span>Recarregar Dados</span>
                   </button>
                 )}
               </div>
 
               {clientes.length === 0 ? (
-                <div className="bg-white border border-[#E3DCD2] rounded-[32px] p-12 text-center space-y-3 shadow-sm">
+                <div className="bg-white border border-[#E2E8F0] rounded-[32px] p-12 text-center space-y-3 shadow-sm">
                   <div className="text-4xl">👥</div>
                   <h4 className="text-sm font-bold text-[#9C8E7B]">Nenhum cliente cadastrado ainda</h4>
                   <p className="text-xs text-[#706558] max-w-xs mx-auto">
@@ -1857,11 +1859,11 @@ export function AdminPanel({
                   </p>
                 </div>
               ) : (
-                <div className="bg-white border border-[#E3DCD2] rounded-3xl overflow-hidden shadow-sm">
+                <div className="bg-white border border-[#E2E8F0] rounded-3xl overflow-hidden shadow-sm">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-xs">
                       <thead>
-                        <tr className="bg-[#FCFBF9] border-b border-[#E3DCD2] text-[#706558] font-bold">
+                        <tr className="bg-[#F8FAFC] border-b border-[#E2E8F0] text-[#706558] font-bold">
                           <th className="p-4">Nome</th>
                           <th className="p-4">Mesa / Quiosque</th>
                           <th className="p-4">Celular / WhatsApp</th>
@@ -1871,12 +1873,12 @@ export function AdminPanel({
                           <th className="p-4 text-right">Ações</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-[#E3DCD2]/50">
+                      <tbody className="divide-y divide-[#E2E8F0]/50">
                         {clientes.map((client) => (
-                          <tr key={client.id || client.nome} className="hover:bg-[#FCFBF9] transition-colors text-[#1B3322]">
+                          <tr key={client.id || client.nome} className="hover:bg-[#F8FAFC] transition-colors text-[#0F2B5C]">
                             <td className="p-4 font-bold">{client.nome}</td>
                             <td className="p-4">
-                              <span className="px-2.5 py-1 bg-[#F4EFE6] border border-[#E3DCD2] rounded-lg font-black text-[#1E5E3A]">
+                              <span className="px-2.5 py-1 bg-[#F0F9FF] border border-[#E2E8F0] rounded-lg font-black text-[#0284C7]">
                                 {client.quiosque}
                               </span>
                             </td>
@@ -1910,7 +1912,7 @@ export function AdminPanel({
                                 {getClientStatus(client)}
                               </span>
                             </td>
-                            <td className="p-4 font-bold text-[#1E5E3A]">
+                            <td className="p-4 font-bold text-[#0284C7]">
                               R$ {getClientTotalConsumed(client).toFixed(2)}
                             </td>
                             <td className="p-4 text-right">
@@ -1955,9 +1957,9 @@ export function AdminPanel({
 
           {activeTab === 'products' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
                 <div>
-                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Cardápio de Produtos</h2>
+                  <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Cardápio de Produtos</h2>
                   <div className="flex items-center gap-2 flex-wrap mt-0.5">
                     <p className="text-xs text-[#706558]">Cadastre, edite e controle a disponibilidade dos itens</p>
                     {products.filter(p => p.estoque !== undefined && p.estoque !== null && p.estoque < 5).length > 0 && (
@@ -1970,7 +1972,7 @@ export function AdminPanel({
                 </div>
                 <button
                   onClick={handleAddProductClick}
-                  className="bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-green-100"
+                  className="bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-sky-100"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Novo Produto</span>
@@ -1982,10 +1984,10 @@ export function AdminPanel({
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white border border-[#E3DCD2] p-6 rounded-2xl space-y-4 shadow-md"
+                  className="bg-white border border-[#E2E8F0] p-6 rounded-2xl space-y-4 shadow-md"
                 >
-                  <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
-                    <h3 className="text-sm font-bold text-[#1B3322]">
+                  <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
+                    <h3 className="text-sm font-bold text-[#0F2B5C]">
                       {editingProduct ? 'Editar Produto' : 'Cadastrar Novo Produto'}
                     </h3>
                     <button
@@ -1993,7 +1995,7 @@ export function AdminPanel({
                         setIsAddingProduct(false);
                         setEditingProduct(null);
                       }}
-                      className="text-[#706558] hover:text-[#1B3322]"
+                      className="text-[#706558] hover:text-[#0F2B5C]"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -2008,7 +2010,7 @@ export function AdminPanel({
                         value={prodForm.nome}
                         onChange={(e) => setProdForm({ ...prodForm, nome: e.target.value })}
                         placeholder="Ex: Iscas de Peixe Crocante"
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-medium"
                       />
                     </div>
 
@@ -2021,7 +2023,7 @@ export function AdminPanel({
                         value={prodForm.preco}
                         onChange={(e) => setProdForm({ ...prodForm, preco: e.target.value })}
                         placeholder="Ex: 65.00"
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-medium"
                       />
                     </div>
 
@@ -2030,7 +2032,7 @@ export function AdminPanel({
                       <select
                         value={prodForm.categoria}
                         onChange={(e) => setProdForm({ ...prodForm, categoria: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-medium"
                       >
                         {categorias.map((cat) => (
                           <option key={cat.id} value={cat.nome}>
@@ -2040,17 +2042,17 @@ export function AdminPanel({
                       </select>
                     </div>
 
-                    <div className="space-y-2 md:col-span-2 border border-[#E3DCD2] p-4 rounded-2xl bg-[#FCFBF9]/50">
-                      <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-2">
+                    <div className="space-y-2 md:col-span-2 border border-[#E2E8F0] p-4 rounded-2xl bg-[#F8FAFC]/50">
+                      <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-2">
                         <label className="text-[10px] font-bold text-[#9C8E7B] uppercase tracking-wider">Imagem do Produto</label>
-                        <div className="flex gap-1.5 bg-[#F4EFE6] p-0.5 rounded-lg border border-[#E3DCD2]">
+                        <div className="flex gap-1.5 bg-[#F0F9FF] p-0.5 rounded-lg border border-[#E2E8F0]">
                           <button
                             type="button"
                             onClick={() => setImageMode('upload')}
                             className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
                               imageMode === 'upload'
-                                ? 'bg-[#1E5E3A] text-white shadow-sm'
-                                : 'text-[#706558] hover:text-[#1B3322]'
+                                ? 'bg-[#0284C7] text-white shadow-sm'
+                                : 'text-[#706558] hover:text-[#0F2B5C]'
                             }`}
                           >
                             Upload de Foto
@@ -2060,8 +2062,8 @@ export function AdminPanel({
                             onClick={() => setImageMode('url')}
                             className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase transition-all cursor-pointer ${
                               imageMode === 'url'
-                                ? 'bg-[#1E5E3A] text-white shadow-sm'
-                                : 'text-[#706558] hover:text-[#1B3322]'
+                                ? 'bg-[#0284C7] text-white shadow-sm'
+                                : 'text-[#706558] hover:text-[#0F2B5C]'
                             }`}
                           >
                             URL da Imagem
@@ -2078,8 +2080,8 @@ export function AdminPanel({
                             onClick={() => document.getElementById('prod-photo-upload')?.click()}
                             className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-all flex flex-col items-center justify-center gap-2 ${
                               isDragging
-                                ? 'border-[#1E5E3A] bg-[#1E5E3A]/5'
-                                : 'border-[#E3DCD2] bg-white hover:border-[#1E5E3A]/40'
+                                ? 'border-[#0284C7] bg-[#0284C7]/5'
+                                : 'border-[#E2E8F0] bg-white hover:border-[#0284C7]/40'
                             }`}
                           >
                             <input
@@ -2090,19 +2092,19 @@ export function AdminPanel({
                               onChange={handleFileChange}
                             />
                             {prodForm.imagem && prodForm.imagem.startsWith('data:') ? (
-                              <div className="relative group w-24 h-24 rounded-lg overflow-hidden border border-[#E3DCD2] shadow-sm">
+                              <div className="relative group w-24 h-24 rounded-lg overflow-hidden border border-[#E2E8F0] shadow-sm">
                                 <img src={prodForm.imagem} alt="Preview" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                                   <span className="text-[9px] text-white font-bold bg-black/60 px-2 py-1 rounded-md">Trocar</span>
                                 </div>
                               </div>
                             ) : (
-                              <div className="w-10 h-10 rounded-full bg-[#1E5E3A]/10 flex items-center justify-center text-[#1E5E3A]">
+                              <div className="w-10 h-10 rounded-full bg-[#0284C7]/10 flex items-center justify-center text-[#0284C7]">
                                 <Upload className="h-5 w-5" />
                               </div>
                             )}
                             <div>
-                              <p className="text-xs font-bold text-[#1B3322]">
+                              <p className="text-xs font-bold text-[#0F2B5C]">
                                 Arraste e solte uma imagem aqui ou clique para selecionar
                               </p>
                               <p className="text-[10px] text-[#706558] mt-1">
@@ -2114,9 +2116,9 @@ export function AdminPanel({
                             <p className="text-xs text-red-600 font-semibold">{uploadError}</p>
                           )}
                           {prodForm.imagem && (
-                            <div className="flex items-center gap-2 justify-between bg-white border border-[#E3DCD2] p-2 rounded-xl shadow-sm">
+                            <div className="flex items-center gap-2 justify-between bg-white border border-[#E2E8F0] p-2 rounded-xl shadow-sm">
                               <div className="flex items-center gap-2 min-w-0">
-                                <div className="w-8 h-8 rounded-md overflow-hidden border border-[#E3DCD2] bg-slate-50 flex-shrink-0">
+                                <div className="w-8 h-8 rounded-md overflow-hidden border border-[#E2E8F0] bg-slate-50 flex-shrink-0">
                                   <img src={prodForm.imagem} alt="Preview" className="w-full h-full object-cover" />
                                 </div>
                                 <span className="text-[10px] text-[#706558] truncate max-w-xs font-semibold font-mono">
@@ -2140,11 +2142,11 @@ export function AdminPanel({
                             value={prodForm.imagem}
                             onChange={(e) => setProdForm({ ...prodForm, imagem: e.target.value })}
                             placeholder="Ex: https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=600"
-                            className="w-full px-3.5 py-2.5 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                            className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                           />
                           {prodForm.imagem && (
-                            <div className="flex items-center gap-2 bg-white border border-[#E3DCD2] p-2 rounded-xl shadow-sm">
-                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E3DCD2] bg-slate-50 flex-shrink-0">
+                            <div className="flex items-center gap-2 bg-white border border-[#E2E8F0] p-2 rounded-xl shadow-sm">
+                              <div className="w-12 h-12 rounded-lg overflow-hidden border border-[#E2E8F0] bg-slate-50 flex-shrink-0">
                                 <img
                                   src={prodForm.imagem}
                                   alt="Preview externa"
@@ -2155,7 +2157,7 @@ export function AdminPanel({
                                 />
                               </div>
                               <div>
-                                <p className="text-[10px] font-bold text-[#1B3322]">Visualização da Imagem Externa</p>
+                                <p className="text-[10px] font-bold text-[#0F2B5C]">Visualização da Imagem Externa</p>
                                 <p className="text-[9px] text-[#706558] truncate max-w-xs">{prodForm.imagem}</p>
                               </div>
                             </div>
@@ -2171,7 +2173,7 @@ export function AdminPanel({
                         value={prodForm.descricao}
                         onChange={(e) => setProdForm({ ...prodForm, descricao: e.target.value })}
                         placeholder="Ex: Filé de pescada fresca em tiras fritas crocantes. Acompanha tártaro."
-                        className="w-full p-3 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium resize-none"
+                        className="w-full p-3 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-medium resize-none"
                       />
                     </div>
 
@@ -2184,7 +2186,7 @@ export function AdminPanel({
                         value={prodForm.estoque}
                         onChange={(e) => setProdForm({ ...prodForm, estoque: e.target.value })}
                         placeholder="Ex: 50 (Deixe em branco para sem limite)"
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-medium"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-medium"
                       />
                     </div>
 
@@ -2194,27 +2196,27 @@ export function AdminPanel({
                         id="prod-ativo-checkbox"
                         checked={prodForm.ativo}
                         onChange={(e) => setProdForm({ ...prodForm, ativo: e.target.checked })}
-                        className="rounded border-[#E3DCD2] bg-[#FCFBF9] text-[#1E5E3A] focus:ring-[#1E5E3A]"
+                        className="rounded border-[#E2E8F0] bg-[#F8FAFC] text-[#0284C7] focus:ring-[#0284C7]"
                       />
-                      <label htmlFor="prod-ativo-checkbox" className="text-xs font-semibold text-[#1B3322]">
+                      <label htmlFor="prod-ativo-checkbox" className="text-xs font-semibold text-[#0F2B5C]">
                         Produto disponível no cardápio
                       </label>
                     </div>
 
-                    <div className="md:col-span-2 flex justify-end gap-2 border-t border-[#E3DCD2] pt-3 mt-2">
+                    <div className="md:col-span-2 flex justify-end gap-2 border-t border-[#E2E8F0] pt-3 mt-2">
                       <button
                         type="button"
                         onClick={() => {
                           setIsAddingProduct(false);
                           setEditingProduct(null);
                         }}
-                        className="px-4 py-2 bg-[#F4EFE6] border border-[#E3DCD2] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
+                        className="px-4 py-2 bg-[#F0F9FF] border border-[#E2E8F0] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-green-100"
+                        className="px-5 py-2 bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-sky-100"
                       >
                         {editingProduct ? 'Salvar Alterações' : 'Cadastrar'}
                       </button>
@@ -2234,19 +2236,19 @@ export function AdminPanel({
                       key={prod.id}
                       className={`p-4 bg-white border rounded-2xl flex gap-4 items-center justify-between shadow-sm hover:shadow-md transition-all ${
                         isOutOfStock
-                          ? 'border-l-4 border-l-red-500 border-r-[#E3DCD2] border-t-[#E3DCD2] border-b-[#E3DCD2]'
+                          ? 'border-l-4 border-l-red-500 border-r-[#E2E8F0] border-t-[#E2E8F0] border-b-[#E2E8F0]'
                           : hasLowStock
-                          ? 'border-l-4 border-l-amber-500 border-r-[#E3DCD2] border-t-[#E3DCD2] border-b-[#E3DCD2]'
-                          : 'border-[#E3DCD2]'
+                          ? 'border-l-4 border-l-amber-500 border-r-[#E2E8F0] border-t-[#E2E8F0] border-b-[#E2E8F0]'
+                          : 'border-[#E2E8F0]'
                       }`}
                     >
                       <div className="flex gap-3 items-center min-w-0">
-                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-[#F4EFE6] border border-[#E3DCD2] flex-shrink-0">
+                        <div className="w-14 h-14 rounded-xl overflow-hidden bg-[#F0F9FF] border border-[#E2E8F0] flex-shrink-0">
                           <img src={prod.imagem} alt={prod.nome} className="w-full h-full object-cover" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5 min-w-0">
-                            <h4 className="text-sm font-bold text-[#1B3322] truncate">{prod.nome}</h4>
+                            <h4 className="text-sm font-bold text-[#0F2B5C] truncate">{prod.nome}</h4>
                             {hasLowStock && (
                               <span
                                 title={isOutOfStock ? "Estoque esgotado!" : `Estoque baixo (${prod.estoque} un)!`}
@@ -2290,7 +2292,7 @@ export function AdminPanel({
                       <div className="flex gap-1.5 flex-shrink-0">
                         <button
                           onClick={() => handleEditProductClick(prod)}
-                          className="p-2 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-xl text-[#706558] border border-[#E3DCD2] cursor-pointer"
+                          className="p-2 bg-[#F0F9FF] hover:bg-[#E2E8F0] rounded-xl text-[#706558] border border-[#E2E8F0] cursor-pointer"
                         title="Editar"
                       >
                         <Edit2 className="h-3.5 w-3.5" />
@@ -2312,9 +2314,9 @@ export function AdminPanel({
 
           {activeTab === 'categories' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
                 <div>
-                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Gerenciar Categorias</h2>
+                  <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Gerenciar Categorias</h2>
                   <p className="text-xs text-[#706558]">Crie, edite e ordene categorias no cardápio</p>
                 </div>
                 <button
@@ -2323,7 +2325,7 @@ export function AdminPanel({
                     setEditingCategory(null);
                     setNewCatName('');
                   }}
-                  className="bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-green-100"
+                  className="bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-sky-100"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Nova Categoria</span>
@@ -2335,7 +2337,7 @@ export function AdminPanel({
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white border border-[#E3DCD2] p-5 rounded-2xl shadow-sm"
+                  className="bg-white border border-[#E2E8F0] p-5 rounded-2xl shadow-sm"
                 >
                   <form onSubmit={handleSaveCategory} className="flex flex-col md:flex-row gap-3 items-end">
                     <div className="flex-1 space-y-1.5 w-full">
@@ -2346,7 +2348,7 @@ export function AdminPanel({
                         value={newCatName}
                         onChange={(e) => setNewCatName(e.target.value)}
                         placeholder="Ex: Espetinhos, Sobremesas Premium"
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                       />
                     </div>
                     <div className="flex gap-2 w-full md:w-auto">
@@ -2356,13 +2358,13 @@ export function AdminPanel({
                           setIsAddingCategory(false);
                           setEditingCategory(null);
                         }}
-                        className="flex-1 md:flex-initial px-4 py-2.5 bg-[#F4EFE6] border border-[#E3DCD2] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
+                        className="flex-1 md:flex-initial px-4 py-2.5 bg-[#F0F9FF] border border-[#E2E8F0] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 md:flex-initial px-5 py-2.5 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-green-100"
+                        className="flex-1 md:flex-initial px-5 py-2.5 bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-sky-100"
                       >
                         {editingCategory ? 'Salvar' : 'Adicionar'}
                       </button>
@@ -2376,9 +2378,9 @@ export function AdminPanel({
                 {categorias.map((cat) => (
                   <div
                     key={cat.id}
-                    className="p-3 bg-white border border-[#E3DCD2] rounded-xl flex items-center justify-between shadow-sm"
+                    className="p-3 bg-white border border-[#E2E8F0] rounded-xl flex items-center justify-between shadow-sm"
                   >
-                    <span className="text-xs font-bold text-[#1B3322]">{cat.nome}</span>
+                    <span className="text-xs font-bold text-[#0F2B5C]">{cat.nome}</span>
                     <div className="flex gap-1.5">
                       <button
                         onClick={() => {
@@ -2386,7 +2388,7 @@ export function AdminPanel({
                           setNewCatName(cat.nome);
                           setIsAddingCategory(false);
                         }}
-                        className="p-2 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-xl text-[#706558] border border-[#E3DCD2] cursor-pointer"
+                        className="p-2 bg-[#F0F9FF] hover:bg-[#E2E8F0] rounded-xl text-[#706558] border border-[#E2E8F0] cursor-pointer"
                       >
                         <Edit2 className="h-3 w-3" />
                       </button>
@@ -2405,30 +2407,30 @@ export function AdminPanel({
 
           {activeTab === 'reports' && (
             <div className="space-y-8 animate-fade-in">
-              <div className="border-b border-[#E3DCD2] pb-3">
-                <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Relatórios & Estatísticas</h2>
+              <div className="border-b border-[#E2E8F0] pb-3">
+                <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Relatórios & Estatísticas</h2>
                 <p className="text-xs text-[#706558]">Acompanhe o desempenho de vendas, faturamento e produtos mais populares</p>
               </div>
 
               {/* KPI Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#1E5E3A]" />
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1.5 h-full bg-[#0284C7]" />
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase text-[#9C8E7B] tracking-wider">Faturamento Hoje</span>
-                    <span className="p-1.5 bg-[#1E5E3A]/10 text-[#1E5E3A] rounded-lg">
+                    <span className="p-1.5 bg-[#0284C7]/10 text-[#0284C7] rounded-lg">
                       <TrendingUp className="h-4 w-4" />
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-serif font-bold text-[#1B3322]">
+                    <h3 className="text-2xl font-serif font-bold text-[#0F2B5C]">
                       R$ {reportsStats.faturamentoDiario.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </h3>
                     <p className="text-[10px] text-[#706558] mt-1">Apenas pedidos concluídos/ativos de hoje</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500" />
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase text-[#9C8E7B] tracking-wider">Faturamento Mensal</span>
@@ -2437,14 +2439,14 @@ export function AdminPanel({
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-serif font-bold text-[#1B3322]">
+                    <h3 className="text-2xl font-serif font-bold text-[#0F2B5C]">
                       R$ {reportsStats.faturamentoMensal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </h3>
                     <p className="text-[10px] text-[#706558] mt-1">Mês corrente ({new Date().toLocaleString('pt-BR', { month: 'long' })})</p>
                   </div>
                 </div>
 
-                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-2 relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-1.5 h-full bg-emerald-600" />
                   <div className="flex justify-between items-center">
                     <span className="text-[10px] font-black uppercase text-[#9C8E7B] tracking-wider">Faturamento Anual</span>
@@ -2453,7 +2455,7 @@ export function AdminPanel({
                     </span>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-serif font-bold text-[#1B3322]">
+                    <h3 className="text-2xl font-serif font-bold text-[#0F2B5C]">
                       R$ {reportsStats.faturamentoAnual.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </h3>
                     <p className="text-[10px] text-[#706558] mt-1">Ano corrente ({new Date().getFullYear()})</p>
@@ -2464,20 +2466,20 @@ export function AdminPanel({
               {/* Charts Section */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 {/* 1. Revenue Over Time Chart */}
-                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E3DCD2] pb-3">
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2E8F0] pb-3">
                     <div>
-                      <h3 className="text-sm font-bold text-[#1B3322] font-serif">Fluxo de Faturamento</h3>
+                      <h3 className="text-sm font-bold text-[#0F2B5C] font-serif">Fluxo de Faturamento</h3>
                       <p className="text-[10px] text-[#706558]">Visualização do faturamento total por período</p>
                     </div>
-                    <div className="flex bg-[#F4EFE6] p-0.5 rounded-lg border border-[#E3DCD2] text-[10px] font-bold">
+                    <div className="flex bg-[#F0F9FF] p-0.5 rounded-lg border border-[#E2E8F0] text-[10px] font-bold">
                       <button
                         type="button"
                         onClick={() => setRevenuePeriod('daily')}
                         className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                           revenuePeriod === 'daily'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         Diário
@@ -2487,8 +2489,8 @@ export function AdminPanel({
                         onClick={() => setRevenuePeriod('monthly')}
                         className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                           revenuePeriod === 'monthly'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         Mensal
@@ -2498,8 +2500,8 @@ export function AdminPanel({
                         onClick={() => setRevenuePeriod('annual')}
                         className={`px-3 py-1 rounded-md transition-all cursor-pointer ${
                           revenuePeriod === 'annual'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         Anual
@@ -2516,52 +2518,52 @@ export function AdminPanel({
                         >
                           <defs>
                             <linearGradient id="colorDaily" x1="0" y1="0" x2="0" y2="1">
-                              <stop offset="5%" stopColor="#1E5E3A" stopOpacity={0.2}/>
-                              <stop offset="95%" stopColor="#1E5E3A" stopOpacity={0}/>
+                              <stop offset="5%" stopColor="#0284C7" stopOpacity={0.2}/>
+                              <stop offset="95%" stopColor="#0284C7" stopOpacity={0}/>
                             </linearGradient>
                           </defs>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                           <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
-                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#1B3322' }}
-                            itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                            contentStyle={{ backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: '12px' }}
+                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#0F2B5C' }}
+                            itemStyle={{ fontSize: '11px', color: '#0284C7' }}
                             formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
                           />
-                          <Area type="monotone" dataKey="Valor" stroke="#1E5E3A" strokeWidth={2} fillOpacity={1} fill="url(#colorDaily)" />
+                          <Area type="monotone" dataKey="Valor" stroke="#0284C7" strokeWidth={2} fillOpacity={1} fill="url(#colorDaily)" />
                         </AreaChart>
                       ) : revenuePeriod === 'monthly' ? (
                         <BarChart
                           data={reportsStats.monthlyTrendData}
                           margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                           <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
-                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#1B3322' }}
-                            itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                            contentStyle={{ backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: '12px' }}
+                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#0F2B5C' }}
+                            itemStyle={{ fontSize: '11px', color: '#0284C7' }}
                             formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
                           />
-                          <Bar dataKey="Valor" fill="#1E5E3A" radius={[4, 4, 0, 0]} maxBarSize={35} />
+                          <Bar dataKey="Valor" fill="#0284C7" radius={[4, 4, 0, 0]} maxBarSize={35} />
                         </BarChart>
                       ) : (
                         <BarChart
                           data={reportsStats.annualTrendData}
                           margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
                         >
-                          <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" vertical={false} />
+                          <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" vertical={false} />
                           <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
                           <YAxis tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
                           <Tooltip
-                            contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
-                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#1B3322' }}
-                            itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                            contentStyle={{ backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: '12px' }}
+                            labelStyle={{ fontSize: '10px', fontWeight: 'bold', color: '#0F2B5C' }}
+                            itemStyle={{ fontSize: '11px', color: '#0284C7' }}
                             formatter={(value: any) => [`R$ ${Number(value).toFixed(2)}`, 'Faturamento']}
                           />
-                          <Bar dataKey="Valor" fill="#1E5E3A" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                          <Bar dataKey="Valor" fill="#0284C7" radius={[4, 4, 0, 0]} maxBarSize={45} />
                         </BarChart>
                       )}
                     </ResponsiveContainer>
@@ -2569,20 +2571,20 @@ export function AdminPanel({
                 </div>
 
                 {/* 2. Most Sold Products Chart */}
-                <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E3DCD2] pb-3">
+                <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E2E8F0] pb-3">
                     <div>
-                      <h3 className="text-sm font-bold text-[#1B3322] font-serif">Produtos Mais Vendidos</h3>
+                      <h3 className="text-sm font-bold text-[#0F2B5C] font-serif">Produtos Mais Vendidos</h3>
                       <p className="text-[10px] text-[#706558]">Produtos com maior volume de saídas por período</p>
                     </div>
-                    <div className="flex bg-[#F4EFE6] p-0.5 rounded-lg border border-[#E3DCD2] text-[9px] font-bold">
+                    <div className="flex bg-[#F0F9FF] p-0.5 rounded-lg border border-[#E2E8F0] text-[9px] font-bold">
                       <button
                         type="button"
                         onClick={() => setProdPeriod('today')}
                         className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                           prodPeriod === 'today'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         Hoje
@@ -2592,8 +2594,8 @@ export function AdminPanel({
                         onClick={() => setProdPeriod('7days')}
                         className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                           prodPeriod === '7days'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         7 Dias
@@ -2603,8 +2605,8 @@ export function AdminPanel({
                         onClick={() => setProdPeriod('30days')}
                         className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                           prodPeriod === '30days'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         30 Dias
@@ -2614,8 +2616,8 @@ export function AdminPanel({
                         onClick={() => setProdPeriod('all')}
                         className={`px-2 py-1 rounded-md transition-all cursor-pointer ${
                           prodPeriod === 'all'
-                            ? 'bg-[#1E5E3A] text-white shadow-sm'
-                            : 'text-[#706558] hover:text-[#1B3322]'
+                            ? 'bg-[#0284C7] text-white shadow-sm'
+                            : 'text-[#706558] hover:text-[#0F2B5C]'
                         }`}
                       >
                         Tudo
@@ -2647,17 +2649,17 @@ export function AdminPanel({
                             data={currentTopProducts}
                             margin={{ top: 10, right: 10, left: 30, bottom: 5 }}
                           >
-                            <CartesianGrid strokeDasharray="3 3" stroke="#E3DCD2" horizontal={false} />
+                            <CartesianGrid strokeDasharray="3 3" stroke="#E2E8F0" horizontal={false} />
                             <XAxis type="number" tick={{ fontSize: 9, fill: '#706558' }} tickLine={false} axisLine={false} />
-                            <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#1B3322', fontWeight: 'semibold' }} tickLine={false} axisLine={false} width={80} />
+                            <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: '#0F2B5C', fontWeight: 'semibold' }} tickLine={false} axisLine={false} width={80} />
                             <Tooltip
-                              contentStyle={{ backgroundColor: '#FCFBF9', borderColor: '#E3DCD2', borderRadius: '12px' }}
-                              itemStyle={{ fontSize: '11px', color: '#1E5E3A' }}
+                              contentStyle={{ backgroundColor: '#F8FAFC', borderColor: '#E2E8F0', borderRadius: '12px' }}
+                              itemStyle={{ fontSize: '11px', color: '#0284C7' }}
                               formatter={(value: any) => [`${value} unidades`, 'Vendido']}
                             />
                             <Bar dataKey="Quantidade" fill="#D97706" radius={[0, 4, 4, 0]} maxBarSize={18}>
                               {currentTopProducts.map((entry, index) => {
-                                const colors = ['#1E5E3A', '#2D7F50', '#41A36B', '#D97706', '#E28C28', '#EAA24C', '#84735E', '#9C8E7B'];
+                                const colors = ['#0284C7', '#2D7F50', '#41A36B', '#D97706', '#E28C28', '#EAA24C', '#84735E', '#9C8E7B'];
                                 return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
                               })}
                             </Bar>
@@ -2670,10 +2672,10 @@ export function AdminPanel({
               </div>
 
               {/* Top Products Table/List for quick scanning */}
-              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-[#1B3322] font-serif">Ranking de Popularidade do Menu (Top 10)</h3>
+                    <h3 className="text-sm font-bold text-[#0F2B5C] font-serif">Ranking de Popularidade do Menu (Top 10)</h3>
                     <p className="text-[10px] text-[#706558]">Os 10 produtos mais vendidos ordenados por volume histórico</p>
                   </div>
                   <span className="text-[10px] bg-amber-500/10 text-amber-700 px-2 py-0.5 rounded-md font-bold">Top 10</span>
@@ -2681,7 +2683,7 @@ export function AdminPanel({
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="border-b border-[#E3DCD2]">
+                      <tr className="border-b border-[#E2E8F0]">
                         <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center w-12">Posição</th>
                         <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Produto</th>
                         <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Hoje</th>
@@ -2714,7 +2716,7 @@ export function AdminPanel({
                           ];
 
                           return (
-                            <tr key={prod.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
+                            <tr key={prod.id} className="border-b border-[#E2E8F0]/55 last:border-b-0 hover:bg-[#F8FAFC]/50 transition-all">
                               <td className="py-3 text-center">
                                 {isTop3 ? (
                                   <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full font-black text-[10px] ${badgeColors[index]}`}>
@@ -2724,11 +2726,11 @@ export function AdminPanel({
                                   <span className="text-[10px] font-bold text-[#706558] font-mono">#{index + 1}</span>
                                 )}
                               </td>
-                              <td className="py-3 text-xs font-bold text-[#1B3322] flex items-center gap-2">
+                              <td className="py-3 text-xs font-bold text-[#0F2B5C] flex items-center gap-2">
                                 {prod.imagem ? (
-                                  <img src={prod.imagem} alt={prod.nome} className="w-6 h-6 rounded-md object-cover border border-[#E3DCD2]" />
+                                  <img src={prod.imagem} alt={prod.nome} className="w-6 h-6 rounded-md object-cover border border-[#E2E8F0]" />
                                 ) : (
-                                  <div className="w-6 h-6 rounded-md bg-[#1E5E3A]/10 flex items-center justify-center text-[10px]">🥥</div>
+                                  <div className="w-6 h-6 rounded-md bg-[#0284C7]/10 flex items-center justify-center text-[10px]">🥥</div>
                                 )}
                                 <span>{prod.nome}</span>
                               </td>
@@ -2747,7 +2749,7 @@ export function AdminPanel({
                                   <span className="bg-slate-50 text-slate-700 px-2 py-0.5 rounded-full font-bold">{thirtyQty}</span>
                                 ) : '-'}
                               </td>
-                              <td className="py-3 text-xs font-black text-[#1E5E3A] text-center font-mono">
+                              <td className="py-3 text-xs font-black text-[#0284C7] text-center font-mono">
                                 {allQty > 0 ? allQty : '-'}
                               </td>
                             </tr>
@@ -2759,16 +2761,16 @@ export function AdminPanel({
               </div>
 
               {/* Ranking de Clientes (Mais Ativos / Frequência de Visitas) */}
-              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-[#1B3322] font-serif flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-[#0F2B5C] font-serif flex items-center gap-2">
                       <Trophy className="h-4 w-4 text-amber-500" />
                       <span>Ranking de Visitas dos Clientes</span>
                     </h3>
                     <p className="text-[10px] text-[#706558]">Clientes que mais visitam e consomem no espaço (por número de pedidos)</p>
                   </div>
-                  <span className="text-[10px] bg-[#1E5E3A]/10 text-[#1E5E3A] px-2 py-0.5 rounded-md font-bold">Fidelidade</span>
+                  <span className="text-[10px] bg-[#0284C7]/10 text-[#0284C7] px-2 py-0.5 rounded-md font-bold">Fidelidade</span>
                 </div>
                 
                 <div className="overflow-x-auto">
@@ -2780,7 +2782,7 @@ export function AdminPanel({
                   ) : (
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-[#E3DCD2]">
+                        <tr className="border-b border-[#E2E8F0]">
                           <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider w-12 text-center">Posição</th>
                           <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Cliente</th>
                           <th className="py-2.5 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Contato / Celular</th>
@@ -2800,7 +2802,7 @@ export function AdminPanel({
                           ];
 
                           return (
-                            <tr key={index} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
+                            <tr key={index} className="border-b border-[#E2E8F0]/55 last:border-b-0 hover:bg-[#F8FAFC]/50 transition-all">
                               <td className="py-3 text-center">
                                 {isTop3 ? (
                                   <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full font-black text-xs ${rankColors[index]}`}>
@@ -2811,9 +2813,9 @@ export function AdminPanel({
                                   <span className="text-xs font-bold text-[#706558] font-mono">#{index + 1}</span>
                                 )}
                               </td>
-                              <td className="py-3 text-xs font-bold text-[#1B3322]">
+                              <td className="py-3 text-xs font-bold text-[#0F2B5C]">
                                 <div className="flex items-center gap-1.5">
-                                  <span className="text-[#1E5E3A]">👤</span>
+                                  <span className="text-[#0284C7]">👤</span>
                                   <span>{client.nome}</span>
                                 </div>
                               </td>
@@ -2831,11 +2833,11 @@ export function AdminPanel({
                                 {client.quiosque || '-'}
                               </td>
                               <td className="py-3 text-center">
-                                <span className="bg-[#1E5E3A]/10 text-[#1E5E3A] px-2.5 py-0.5 rounded-full text-xs font-black font-mono">
+                                <span className="bg-[#0284C7]/10 text-[#0284C7] px-2.5 py-0.5 rounded-full text-xs font-black font-mono">
                                   {client.pedidosCount} {client.pedidosCount === 1 ? 'pedido' : 'pedidos'}
                                 </span>
                               </td>
-                              <td className="py-3 text-xs font-bold text-[#1E5E3A] text-right font-mono">
+                              <td className="py-3 text-xs font-bold text-[#0284C7] text-right font-mono">
                                 R$ {client.totalSpent.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
                               <td className="py-3 text-[10px] text-[#706558] text-right font-medium">
@@ -2860,14 +2862,14 @@ export function AdminPanel({
 
           {activeTab === 'clientes' && (
             <div className="space-y-6">
-              <div className="flex items-center justify-between border-b border-[#E3DCD2] pb-3">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] pb-3">
                 <div>
-                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Gerenciar Clientes Cadastrados</h2>
+                  <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Gerenciar Clientes Cadastrados</h2>
                   <p className="text-xs text-[#706558]">Visualize, edite perfis ou cadastre novos clientes</p>
                 </div>
                 <button
                   onClick={handleAddClientClick}
-                  className="bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-green-100"
+                  className="bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-1.5 cursor-pointer shadow-md shadow-sky-100"
                 >
                   <UserPlus className="h-4 w-4" />
                   <span>Cadastrar Novo Cliente</span>
@@ -2879,10 +2881,10 @@ export function AdminPanel({
                 <motion.div
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white border border-[#E3DCD2] p-6 rounded-2xl shadow-sm"
+                  className="bg-white border border-[#E2E8F0] p-6 rounded-2xl shadow-sm"
                 >
                   <div className="mb-4">
-                    <h3 className="text-sm font-bold text-[#1B3322]">
+                    <h3 className="text-sm font-bold text-[#0F2B5C]">
                       {editingClient ? 'Editar Perfil do Cliente' : 'Cadastrar Novo Cliente'}
                     </h3>
                     <p className="text-[10px] text-[#706558]">Insira as informações de cadastro do cliente</p>
@@ -2898,7 +2900,7 @@ export function AdminPanel({
                           value={clientForm.nome}
                           onChange={(e) => setClientForm({ ...clientForm, nome: e.target.value })}
                           placeholder="Ex: Mariana Silva"
-                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                          className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                         />
                       </div>
 
@@ -2910,7 +2912,7 @@ export function AdminPanel({
                           value={clientForm.quiosque}
                           onChange={(e) => setClientForm({ ...clientForm, quiosque: e.target.value })}
                           placeholder="Ex: Mesa 05 ou Espreguiçadeira 12"
-                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                          className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                         />
                       </div>
 
@@ -2922,7 +2924,7 @@ export function AdminPanel({
                           value={clientForm.celular}
                           onChange={(e) => setClientForm({ ...clientForm, celular: e.target.value, telefone: e.target.value })}
                           placeholder="Ex: (91) 98888-7777"
-                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                          className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                         />
                       </div>
 
@@ -2933,25 +2935,25 @@ export function AdminPanel({
                           value={clientForm.telefone}
                           onChange={(e) => setClientForm({ ...clientForm, telefone: e.target.value })}
                           placeholder="Ex: (91) 3222-1111"
-                          className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                          className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                         />
                       </div>
                     </div>
 
-                    <div className="flex justify-end gap-2 border-t border-[#E3DCD2] pt-3">
+                    <div className="flex justify-end gap-2 border-t border-[#E2E8F0] pt-3">
                       <button
                         type="button"
                         onClick={() => {
                           setIsAddingClient(false);
                           setEditingClient(null);
                         }}
-                        className="px-4 py-2 bg-[#F4EFE6] border border-[#E3DCD2] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
+                        className="px-4 py-2 bg-[#F0F9FF] border border-[#E2E8F0] text-[#706558] font-bold text-xs rounded-xl hover:bg-opacity-90 transition-all cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-green-100"
+                        className="px-5 py-2 bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer shadow-sm shadow-sky-100"
                       >
                         {editingClient ? 'Salvar Alterações' : 'Cadastrar'}
                       </button>
@@ -2961,7 +2963,7 @@ export function AdminPanel({
               )}
 
               {/* Clients Table List */}
-              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 shadow-sm space-y-4">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 shadow-sm space-y-4">
                 {clientes.length === 0 ? (
                   <div className="py-12 text-center space-y-2">
                     <User className="h-10 w-10 text-[#9C8E7B] mx-auto opacity-40" />
@@ -2971,7 +2973,7 @@ export function AdminPanel({
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="border-b border-[#E3DCD2]">
+                        <tr className="border-b border-[#E2E8F0]">
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider">Nome do Cliente</th>
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Mesa / Local</th>
                           <th className="py-3 text-[9px] font-black uppercase text-[#9C8E7B] tracking-wider text-center">Celular / Telefone</th>
@@ -2986,24 +2988,24 @@ export function AdminPanel({
                           const rawPhone = (cli.telefone || cli.celular || '').replace(/\D/g, '');
                           const whatsappUrl = rawPhone ? `https://wa.me/55${rawPhone}` : null;
                           return (
-                            <tr key={cli.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-[#FCFBF9]/50 transition-all">
-                              <td className="py-3.5 text-xs font-bold text-[#1B3322]">
+                            <tr key={cli.id} className="border-b border-[#E2E8F0]/55 last:border-b-0 hover:bg-[#F8FAFC]/50 transition-all">
+                              <td className="py-3.5 text-xs font-bold text-[#0F2B5C]">
                                 <div className="flex items-center gap-2">
-                                  <div className="w-8 h-8 rounded-full bg-[#1E5E3A]/10 flex items-center justify-center text-[#1E5E3A] font-extrabold text-xs">
+                                  <div className="w-8 h-8 rounded-full bg-[#0284C7]/10 flex items-center justify-center text-[#0284C7] font-extrabold text-xs">
                                     {cli.nome.charAt(0).toUpperCase()}
                                   </div>
                                   <div>
-                                    <p className="font-bold text-xs text-[#1B3322]">{cli.nome}</p>
+                                    <p className="font-bold text-xs text-[#0F2B5C]">{cli.nome}</p>
                                     <p className="text-[9px] text-[#9C8E7B] font-mono">ID: {cli.id.slice(-6).toUpperCase()}</p>
                                   </div>
                                 </div>
                               </td>
                               <td className="py-3.5 text-xs text-center">
-                                <span className="bg-[#F4EFE6] border border-[#E3DCD2] text-[#1E5E3A] font-extrabold px-2.5 py-0.5 rounded-lg text-[10px]">
+                                <span className="bg-[#F0F9FF] border border-[#E2E8F0] text-[#0284C7] font-extrabold px-2.5 py-0.5 rounded-lg text-[10px]">
                                   {cli.quiosque}
                                 </span>
                               </td>
-                              <td className="py-3.5 text-xs text-center font-semibold text-[#1B3322] font-mono">
+                              <td className="py-3.5 text-xs text-center font-semibold text-[#0F2B5C] font-mono">
                                 {cli.telefone || cli.celular || '-'}
                               </td>
                               <td className="py-3.5 text-[10px] text-center text-[#706558] font-semibold">
@@ -3022,7 +3024,7 @@ export function AdminPanel({
                                   {getClientStatus(cli)}
                                 </span>
                               </td>
-                              <td className="py-3.5 text-xs text-center font-bold text-[#1E5E3A]">
+                              <td className="py-3.5 text-xs text-center font-bold text-[#0284C7]">
                                 R$ {getClientTotalConsumed(cli).toFixed(2)}
                               </td>
                               <td className="py-3.5 text-right">
@@ -3070,7 +3072,7 @@ export function AdminPanel({
                                   )}
                                   <button
                                     onClick={() => handleEditClientClick(cli)}
-                                    className="p-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] border border-[#E3DCD2] text-[#706558] rounded-lg cursor-pointer transition-all"
+                                    className="p-1.5 bg-[#F0F9FF] hover:bg-[#E2E8F0] border border-[#E2E8F0] text-[#706558] rounded-lg cursor-pointer transition-all"
                                     title="Editar Dados"
                                   >
                                     <Edit2 className="h-3.5 w-3.5" />
@@ -3097,12 +3099,12 @@ export function AdminPanel({
 
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              <div className="border-b border-[#E3DCD2] pb-3">
-                <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Configurações do Quiosque</h2>
+              <div className="border-b border-[#E2E8F0] pb-3">
+                <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Configurações do Quiosque</h2>
                 <p className="text-xs text-[#706558]">Personalize a identidade visual e as taxas do estabelecimento</p>
               </div>
 
-              <form onSubmit={handleSaveSettings} className="bg-white border border-[#E3DCD2] rounded-2xl p-6 space-y-6 max-w-2xl shadow-sm">
+              <form onSubmit={handleSaveSettings} className="bg-white border border-[#E2E8F0] rounded-2xl p-6 space-y-6 max-w-2xl shadow-sm">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-[#9C8E7B] uppercase">Nome do Estabelecimento</label>
@@ -3112,12 +3114,12 @@ export function AdminPanel({
                         required
                         value={settingsForm.nome}
                         onChange={(e) => setSettingsForm({ ...settingsForm, nome: e.target.value })}
-                        className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 md:col-span-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl p-4">
+                  <div className="space-y-1.5 md:col-span-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl p-4">
                     <label className="text-[10px] font-bold text-[#9C8E7B] uppercase block mb-1">Logotipo do Estabelecimento</label>
                     <p className="text-[11px] text-[#706558] mb-3">
                       Envie uma imagem com a logo do seu quiosque ou defina um emoji/texto personalizado.
@@ -3125,18 +3127,18 @@ export function AdminPanel({
                     
                     <div className="flex flex-col sm:flex-row gap-4 items-center">
                       {/* Logo Preview */}
-                      <div className="w-20 h-20 rounded-2xl bg-white border border-[#E3DCD2] flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0 relative group">
-                        {settingsForm.logo && (settingsForm.logo.startsWith('http') || settingsForm.logo.startsWith('data:image')) ? (
-                          <img src={settingsForm.logo} alt="Logo Preview" className="w-full h-full object-cover" />
+                      <div className="w-20 h-20 rounded-2xl bg-white border border-[#E2E8F0] flex items-center justify-center overflow-hidden shadow-sm flex-shrink-0 relative group p-1">
+                        {settingsForm.logo && (settingsForm.logo.startsWith('http') || settingsForm.logo.startsWith('data:image') || settingsForm.logo.startsWith('/') || settingsForm.logo.includes('.svg') || settingsForm.logo.includes('.png')) ? (
+                          <img src={settingsForm.logo} alt="Logo Preview" className="w-full h-full object-contain" />
                         ) : (
-                          <span className="text-4xl">{settingsForm.logo || '🥥'}</span>
+                          <span className="text-4xl">{settingsForm.logo || '🌊'}</span>
                         )}
                         {settingsForm.logo && (
                           <button
                             type="button"
-                            onClick={() => setSettingsForm({ ...settingsForm, logo: '🥥' })}
+                            onClick={() => setSettingsForm({ ...settingsForm, logo: '/moju-park-logo.svg' })}
                             className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-xs font-semibold"
-                            title="Resetar para o padrão"
+                            title="Resetar para o padrão Moju Park"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
@@ -3147,7 +3149,7 @@ export function AdminPanel({
                       <div className="flex-1 w-full space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {/* File input (Button style) */}
-                          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#E3DCD2] rounded-xl p-3 hover:border-[#1E5E3A] hover:bg-[#F4EFE6]/20 transition-all cursor-pointer">
+                          <div className="relative flex flex-col items-center justify-center border-2 border-dashed border-[#E2E8F0] rounded-xl p-3 hover:border-[#0284C7] hover:bg-[#F0F9FF]/20 transition-all cursor-pointer">
                             <input
                               type="file"
                               accept="image/*"
@@ -3170,7 +3172,7 @@ export function AdminPanel({
                               }}
                             />
                             <Upload className="h-4 w-4 text-[#706558] mb-1" />
-                            <span className="text-[10px] font-bold text-[#1B3322]">Enviar Imagem</span>
+                            <span className="text-[10px] font-bold text-[#0F2B5C]">Enviar Imagem</span>
                             <span className="text-[9px] text-[#9C8E7B]">Até 2MB (PNG, JPG, SVG)</span>
                           </div>
 
@@ -3180,9 +3182,9 @@ export function AdminPanel({
                             <input
                               type="text"
                               value={settingsForm.logo.startsWith('data:image') || settingsForm.logo.startsWith('http') ? '' : settingsForm.logo}
-                              placeholder="Ex: 🌴, 🥥, Bella Costa"
+                              placeholder="Ex: 🌊, 🏖️, Moju Park"
                               onChange={(e) => setSettingsForm({ ...settingsForm, logo: e.target.value })}
-                              className="w-full px-3 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                              className="w-full px-3 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                             />
                           </div>
                         </div>
@@ -3200,7 +3202,7 @@ export function AdminPanel({
                         type="text"
                         value={settingsForm.telefone}
                         onChange={(e) => setSettingsForm({ ...settingsForm, telefone: e.target.value })}
-                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                       />
                     </div>
                   </div>
@@ -3215,7 +3217,7 @@ export function AdminPanel({
                         type="number"
                         value={settingsForm.taxa_servico}
                         onChange={(e) => setSettingsForm({ ...settingsForm, taxa_servico: parseInt(e.target.value) || 0 })}
-                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                       />
                     </div>
                   </div>
@@ -3230,7 +3232,7 @@ export function AdminPanel({
                         type="text"
                         value={settingsForm.endereco}
                         onChange={(e) => setSettingsForm({ ...settingsForm, endereco: e.target.value })}
-                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                       />
                     </div>
                   </div>
@@ -3245,7 +3247,7 @@ export function AdminPanel({
                         rows={2}
                         value={settingsForm.mensagem_inicial}
                         onChange={(e) => setSettingsForm({ ...settingsForm, mensagem_inicial: e.target.value })}
-                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs resize-none font-semibold"
+                        className="w-full pl-9 pr-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs resize-none font-semibold"
                       />
                     </div>
                   </div>
@@ -3256,15 +3258,15 @@ export function AdminPanel({
                       type="text"
                       value={settingsForm.horario_funcionamento}
                       onChange={(e) => setSettingsForm({ ...settingsForm, horario_funcionamento: e.target.value })}
-                      className="w-full px-3.5 py-2.5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] focus:ring-1 focus:ring-[#1E5E3A] text-xs font-semibold"
+                      className="w-full px-3.5 py-2.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] text-xs font-semibold"
                     />
                   </div>
                 </div>
 
-                <div className="flex justify-end pt-3 border-t border-[#E3DCD2]">
+                <div className="flex justify-end pt-3 border-t border-[#E2E8F0]">
                   <button
                     type="submit"
-                    className="px-5 py-2.5 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-green-100"
+                    className="px-5 py-2.5 bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-sky-100"
                   >
                     Salvar Configurações
                   </button>
@@ -3275,9 +3277,9 @@ export function AdminPanel({
 
           {activeTab === 'team' && (
             <div className="space-y-6">
-              <div className="border-b border-[#E3DCD2] pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
+              <div className="border-b border-[#E2E8F0] pb-3 flex flex-col sm:flex-row justify-between sm:items-center gap-2">
                 <div>
-                  <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Gerenciamento de Equipe</h2>
+                  <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Gerenciamento de Equipe</h2>
                   <p className="text-xs text-[#706558]">Cadastre garçons e administradores para gerenciar permissões e acessos restritos</p>
                 </div>
                 <button
@@ -3287,7 +3289,7 @@ export function AdminPanel({
                     setUserForm({ nome: '', usuario: '', senha: '', regra: 'garcom' });
                     setIsAddingUser(true);
                   }}
-                  className="px-4 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-green-100 flex items-center justify-center gap-1.5 self-start sm:self-auto"
+                  className="px-4 py-2 bg-[#0284C7] hover:bg-[#0284C7]/90 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-sky-100 flex items-center justify-center gap-1.5 self-start sm:self-auto"
                 >
                   <Plus className="h-4 w-4" />
                   <span>Cadastrar Colaborador</span>
@@ -3296,9 +3298,9 @@ export function AdminPanel({
 
               {/* Form Modal / Panel */}
               {(isAddingUser || editingUser) && (
-                <div className="p-5 bg-[#FCFBF9] border border-[#E3DCD2] rounded-2xl space-y-4 shadow-sm relative">
+                <div className="p-5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl space-y-4 shadow-sm relative">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider">
+                    <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">
                       {editingUser ? 'Editar Colaborador' : 'Novo Colaborador'}
                     </h3>
                     <button
@@ -3307,7 +3309,7 @@ export function AdminPanel({
                         setIsAddingUser(false);
                         setEditingUser(null);
                       }}
-                      className="p-1 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-lg text-[#706558] cursor-pointer"
+                      className="p-1 bg-[#F0F9FF] hover:bg-[#E2E8F0] rounded-lg text-[#706558] cursor-pointer"
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -3325,7 +3327,7 @@ export function AdminPanel({
                         }}
                         placeholder="Ex: João Silva"
                         required
-                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                        className="w-full px-3.5 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] text-xs font-semibold"
                       />
                     </div>
 
@@ -3340,7 +3342,7 @@ export function AdminPanel({
                         }}
                         placeholder="Ex: joao.garcom"
                         required
-                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                        className="w-full px-3.5 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] text-xs font-semibold"
                       />
                     </div>
 
@@ -3357,7 +3359,7 @@ export function AdminPanel({
                         }}
                         placeholder={editingUser ? 'Senha inalterada' : 'Defina a senha'}
                         required={!editingUser}
-                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                        className="w-full px-3.5 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] text-xs font-semibold"
                       />
                     </div>
 
@@ -3370,7 +3372,7 @@ export function AdminPanel({
                           if (editingUser) setEditingUser({ ...editingUser, regra: val });
                           else setUserForm({ ...userForm, regra: val });
                         }}
-                        className="w-full px-3.5 py-2 bg-white border border-[#E3DCD2] rounded-xl text-[#1B3322] focus:outline-none focus:border-[#1E5E3A] text-xs font-semibold"
+                        className="w-full px-3.5 py-2 bg-white border border-[#E2E8F0] rounded-xl text-[#0F2B5C] focus:outline-none focus:border-[#0284C7] text-xs font-semibold"
                       >
                         <option value="garcom">Garçom (Acesso apenas a Pedidos)</option>
                         <option value="admin">Administrador (Acesso Completo)</option>
@@ -3384,13 +3386,13 @@ export function AdminPanel({
                           setIsAddingUser(false);
                           setEditingUser(null);
                         }}
-                        className="px-4 py-2 bg-[#F4EFE6] hover:bg-[#E3DCD2] text-[#706558] font-bold text-xs rounded-xl transition-all cursor-pointer"
+                        className="px-4 py-2 bg-[#F0F9FF] hover:bg-[#E2E8F0] text-[#706558] font-bold text-xs rounded-xl transition-all cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-[#1E5E3A] hover:bg-[#1E5E3A]/95 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-green-100"
+                        className="px-5 py-2 bg-[#0284C7] hover:bg-[#0284C7]/95 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer shadow-sky-100"
                       >
                         {editingUser ? 'Atualizar Dados' : 'Salvar Cadastro'}
                       </button>
@@ -3400,10 +3402,10 @@ export function AdminPanel({
               )}
 
               {/* Users List Table */}
-              <div className="bg-[#FCFBF9] border border-[#E3DCD2] rounded-2xl overflow-hidden shadow-sm">
-                <div className="p-4 bg-white border-b border-[#E3DCD2] flex justify-between items-center">
-                  <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider">Membros da Equipe</h3>
-                  <span className="text-[10px] font-bold bg-[#F4EFE6] text-[#706558] px-2.5 py-0.5 rounded-full">
+              <div className="bg-[#F8FAFC] border border-[#E2E8F0] rounded-2xl overflow-hidden shadow-sm">
+                <div className="p-4 bg-white border-b border-[#E2E8F0] flex justify-between items-center">
+                  <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Membros da Equipe</h3>
+                  <span className="text-[10px] font-bold bg-[#F0F9FF] text-[#706558] px-2.5 py-0.5 rounded-full">
                     {teamUsers.length} usuários
                   </span>
                 </div>
@@ -3421,7 +3423,7 @@ export function AdminPanel({
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                       <thead>
-                        <tr className="bg-[#F4EFE6]/40 border-b border-[#E3DCD2] text-[10px] font-extrabold text-[#706558] uppercase tracking-wider">
+                        <tr className="bg-[#F0F9FF]/40 border-b border-[#E2E8F0] text-[10px] font-extrabold text-[#706558] uppercase tracking-wider">
                           <th className="py-3 px-4">Nome</th>
                           <th className="py-3 px-4">Usuário / Login</th>
                           <th className="py-3 px-4 text-center">Nível de Acesso</th>
@@ -3430,12 +3432,12 @@ export function AdminPanel({
                       </thead>
                       <tbody>
                         {teamUsers.map((user) => (
-                          <tr key={user.id} className="border-b border-[#E3DCD2]/55 last:border-b-0 hover:bg-white transition-all">
-                            <td className="py-3.5 px-4 text-xs font-bold text-[#1B3322]">
+                          <tr key={user.id} className="border-b border-[#E2E8F0]/55 last:border-b-0 hover:bg-white transition-all">
+                            <td className="py-3.5 px-4 text-xs font-bold text-[#0F2B5C]">
                               <div className="flex items-center gap-2">
                                 <div className={`w-7 h-7 rounded-full flex items-center justify-center font-extrabold text-[10px] ${
                                   user.regra === 'admin' 
-                                    ? 'bg-[#1E5E3A]/10 text-[#1E5E3A]' 
+                                    ? 'bg-[#0284C7]/10 text-[#0284C7]' 
                                     : 'bg-amber-500/10 text-amber-700'
                                 }`}>
                                   {user.nome.charAt(0).toUpperCase()}
@@ -3463,7 +3465,7 @@ export function AdminPanel({
                                     setEditingUser({ ...user, senha: '' });
                                     setIsAddingUser(false);
                                   }}
-                                  className="p-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] rounded-lg text-[#706558] transition-all cursor-pointer"
+                                  className="p-1.5 bg-[#F0F9FF] hover:bg-[#E2E8F0] rounded-lg text-[#706558] transition-all cursor-pointer"
                                   title="Editar"
                                 >
                                   <Edit2 className="h-3.5 w-3.5" />
@@ -3495,15 +3497,15 @@ export function AdminPanel({
 
           {activeTab === 'supabase' && (
             <div className="space-y-6">
-              <div className="border-b border-[#E3DCD2] pb-3">
-                <h2 className="text-lg font-serif italic font-bold text-[#1B3322]">Supabase Integration Setup</h2>
+              <div className="border-b border-[#E2E8F0] pb-3">
+                <h2 className="text-lg font-serif italic font-bold text-[#0F2B5C]">Supabase Integration Setup</h2>
                 <p className="text-xs text-[#706558]">Instruções para salvar dados persistentemente na nuvem com PostgreSQL</p>
               </div>
 
               {/* Status card */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 bg-white border border-[#E3DCD2] rounded-2xl space-y-3 shadow-sm">
-                  <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider">Status da Conexão</h3>
+                <div className="p-5 bg-white border border-[#E2E8F0] rounded-2xl space-y-3 shadow-sm">
+                  <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Status da Conexão</h3>
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-3.5 h-3.5 rounded-full ${
@@ -3514,7 +3516,7 @@ export function AdminPanel({
                           : 'bg-amber-500'
                       }`}
                     />
-                    <span className="text-sm font-bold text-[#1B3322]">
+                    <span className="text-sm font-bold text-[#0F2B5C]">
                       {supabaseStatus === 'connected'
                         ? 'Conectado com Supabase Cloud Database'
                         : supabaseStatus === 'disconnected'
@@ -3529,11 +3531,11 @@ export function AdminPanel({
                   </p>
                 </div>
 
-                <div className="p-5 bg-white border border-[#E3DCD2] rounded-2xl space-y-3 shadow-sm">
-                  <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider">Variáveis de Ambiente</h3>
-                  <div className="space-y-1 text-[11px] text-[#1B3322] font-mono">
-                    <p>VITE_SUPABASE_URL: <span className="text-[#1E5E3A] font-bold">{hasSupabaseConfig ? 'Configurado' : 'Não Configurado'}</span></p>
-                    <p>VITE_SUPABASE_ANON_KEY: <span className="text-[#1E5E3A] font-bold">{hasSupabaseConfig ? 'Configurado' : 'Não Configurado'}</span></p>
+                <div className="p-5 bg-white border border-[#E2E8F0] rounded-2xl space-y-3 shadow-sm">
+                  <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Variáveis de Ambiente</h3>
+                  <div className="space-y-1 text-[11px] text-[#0F2B5C] font-mono">
+                    <p>VITE_SUPABASE_URL: <span className="text-[#0284C7] font-bold">{hasSupabaseConfig ? 'Configurado' : 'Não Configurado'}</span></p>
+                    <p>VITE_SUPABASE_ANON_KEY: <span className="text-[#0284C7] font-bold">{hasSupabaseConfig ? 'Configurado' : 'Não Configurado'}</span></p>
                   </div>
                   <p className="text-[11px] text-[#706558] leading-normal">
                     Adicione estas variáveis no arquivo <strong>.env</strong> localmente ou através da aba de Configurações no AI Studio para conectar seu próprio banco.
@@ -3543,12 +3545,12 @@ export function AdminPanel({
 
               {/* Sincronização direta de dados locais */}
               {supabaseStatus === 'connected' && (
-                <div className="p-5 bg-[#FCFBF9] border border-emerald-200 rounded-2xl space-y-4 shadow-sm relative overflow-hidden">
+                <div className="p-5 bg-[#F8FAFC] border border-emerald-200 rounded-2xl space-y-4 shadow-sm relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-2 h-full bg-emerald-600" />
                   <div className="pl-2 space-y-3">
                     <div className="flex items-center gap-2">
                       <Database className="h-5 w-5 text-emerald-600 animate-pulse" />
-                      <h3 className="text-sm font-black text-[#1B3322] uppercase tracking-wider font-serif italic">Sincronização Ativa</h3>
+                      <h3 className="text-sm font-black text-[#0F2B5C] uppercase tracking-wider font-serif italic">Sincronização Ativa</h3>
                     </div>
                     <p className="text-[11px] text-[#706558] leading-normal">
                       Sua conta Supabase está ativa e conectada! Clique no botão abaixo para copiar e sincronizar todas as categorias locais (<strong>{categorias.length} categorias</strong>) e produtos (<strong>{products.length} itens</strong>) diretamente com o seu banco de dados na nuvem.
@@ -3567,7 +3569,7 @@ export function AdminPanel({
                         }
                       }}
                       disabled={isSyncing}
-                      className="px-5 py-3 bg-[#1E5E3A] hover:bg-[#1E5E3A]/90 disabled:bg-[#1E5E3A]/50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
+                      className="px-5 py-3 bg-[#0284C7] hover:bg-[#0284C7]/90 disabled:bg-[#0284C7]/50 text-white font-bold text-xs rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-2"
                     >
                       {isSyncing ? (
                         <>
@@ -3586,15 +3588,15 @@ export function AdminPanel({
               )}
 
               {/* SQL Migration Script Copy Box */}
-              <div className="bg-white border border-[#E3DCD2] rounded-2xl p-5 space-y-4 shadow-sm">
+              <div className="bg-white border border-[#E2E8F0] rounded-2xl p-5 space-y-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <FileCode className="h-5 w-5 text-[#1E5E3A]" />
-                    <h3 className="text-xs font-black uppercase tracking-wider text-[#1B3322]">Script de Criação de Tabelas SQL</h3>
+                    <FileCode className="h-5 w-5 text-[#0284C7]" />
+                    <h3 className="text-xs font-black uppercase tracking-wider text-[#0F2B5C]">Script de Criação de Tabelas SQL</h3>
                   </div>
                   <button
                     onClick={copySqlSetup}
-                    className="px-3.5 py-1.5 bg-[#F4EFE6] hover:bg-[#E3DCD2] text-[#1E5E3A] text-xs font-bold rounded-xl border border-[#E3DCD2] cursor-pointer flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-[#F0F9FF] hover:bg-[#E2E8F0] text-[#0284C7] text-xs font-bold rounded-xl border border-[#E2E8F0] cursor-pointer flex items-center gap-1.5"
                   >
                     {sqlCopied ? <Check className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
                     <span>{sqlCopied ? 'Copiado!' : 'Copiar SQL Setup'}</span>
@@ -3605,8 +3607,8 @@ export function AdminPanel({
                   Copie o script abaixo e cole-o no menu <strong>SQL Editor</strong> dentro do seu painel do Supabase. Ele criará as tabelas de <strong>produtos, categorias, pedidos, pedido_itens e políticas de RLS</strong> necessárias para o projeto.
                 </p>
 
-                <div className="bg-[#FCFBF9] p-4 rounded-xl border border-[#E3DCD2] overflow-x-auto">
-                  <pre className="text-[10px] text-[#1E5E3A] font-mono leading-relaxed select-all max-h-60 overflow-y-auto">
+                <div className="bg-[#F8FAFC] p-4 rounded-xl border border-[#E2E8F0] overflow-x-auto">
+                  <pre className="text-[10px] text-[#0284C7] font-mono leading-relaxed select-all max-h-60 overflow-y-auto">
                     {SUPABASE_SQL_SETUP}
                   </pre>
                 </div>
@@ -3624,20 +3626,20 @@ export function AdminPanel({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#FCFBF9] w-full max-w-4xl rounded-[32px] border border-[#E3DCD2] shadow-2xl flex flex-col max-h-[90vh]"
+              className="bg-[#F8FAFC] w-full max-w-4xl rounded-[32px] border border-[#E2E8F0] shadow-2xl flex flex-col max-h-[90vh]"
             >
               {/* Modal Header */}
-              <div className="p-6 border-b border-[#E3DCD2] flex justify-between items-center bg-[#F4EFE6] rounded-t-[32px]">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-[#F0F9FF] rounded-t-[32px]">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🌴</span>
                   <div>
-                    <h3 className="text-base font-serif italic font-bold text-[#1B3322]">Lançar Nova Venda (Garçom)</h3>
+                    <h3 className="text-base font-serif italic font-bold text-[#0F2B5C]">Lançar Nova Venda (Garçom)</h3>
                     <p className="text-[10px] text-[#706558]">Registre um pedido diretamente na mesa do cliente</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setIsAddingOrder(false)}
-                  className="p-1.5 rounded-xl hover:bg-[#E3DCD2] text-[#706558] cursor-pointer"
+                  className="p-1.5 rounded-xl hover:bg-[#E2E8F0] text-[#706558] cursor-pointer"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -3648,7 +3650,7 @@ export function AdminPanel({
                 {/* Column Left (ColSpan 7) */}
                 <div className="lg:col-span-7 space-y-4">
                   {/* Client Info inputs */}
-                  <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-2xl border border-[#E3DCD2]">
+                  <div className="grid grid-cols-2 gap-4 bg-white p-4 rounded-2xl border border-[#E2E8F0]">
                     <div className="space-y-1">
                       <label className="text-[10px] font-extrabold text-[#706558] uppercase block">Nome do Cliente</label>
                       <input
@@ -3657,7 +3659,7 @@ export function AdminPanel({
                         placeholder="Nome do cliente"
                         value={waiterOrderForm.cliente_nome}
                         onChange={(e) => setWaiterOrderForm(prev => ({ ...prev, cliente_nome: e.target.value }))}
-                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] focus:ring-1 focus:ring-[#1E5E3A] outline-none"
+                        className="w-full px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#0F2B5C] focus:ring-1 focus:ring-[#0284C7] outline-none"
                       />
                     </div>
                     <div className="space-y-1">
@@ -3668,7 +3670,7 @@ export function AdminPanel({
                         placeholder="Ex: Quiosque 04"
                         value={waiterOrderForm.quiosque}
                         onChange={(e) => setWaiterOrderForm(prev => ({ ...prev, quiosque: e.target.value }))}
-                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs font-bold text-[#1B3322] focus:ring-1 focus:ring-[#1E5E3A] outline-none"
+                        className="w-full px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs font-bold text-[#0F2B5C] focus:ring-1 focus:ring-[#0284C7] outline-none"
                       />
                     </div>
                   </div>
@@ -3680,8 +3682,8 @@ export function AdminPanel({
                       onClick={() => setOrderCategoryFilter('all')}
                       className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
                         orderCategoryFilter === 'all'
-                          ? 'bg-[#1E5E3A] text-white border-[#1E5E3A]'
-                          : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                          ? 'bg-[#0284C7] text-white border-[#0284C7]'
+                          : 'bg-white text-[#706558] border-[#E2E8F0] hover:bg-[#F0F9FF]'
                       }`}
                     >
                       Todos
@@ -3693,8 +3695,8 @@ export function AdminPanel({
                         onClick={() => setOrderCategoryFilter(cat.nome)}
                         className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
                           orderCategoryFilter === cat.nome
-                            ? 'bg-[#1E5E3A] text-white border-[#1E5E3A]'
-                            : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                            ? 'bg-[#0284C7] text-white border-[#0284C7]'
+                            : 'bg-white text-[#706558] border-[#E2E8F0] hover:bg-[#F0F9FF]'
                         }`}
                       >
                         {cat.nome}
@@ -3715,12 +3717,12 @@ export function AdminPanel({
                           <div
                             key={prod.id}
                             className={`p-3 bg-white rounded-xl border flex gap-3 items-center justify-between transition-all ${
-                              count > 0 ? 'border-[#1E5E3A] bg-green-50/10 ring-1 ring-[#1E5E3A]/10' : 'border-[#E3DCD2]'
+                              count > 0 ? 'border-[#0284C7] bg-green-50/10 ring-1 ring-[#0284C7]/10' : 'border-[#E2E8F0]'
                             }`}
                           >
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-bold text-[#1B3322] truncate">{prod.nome}</h4>
-                              <p className="text-[10px] font-extrabold text-[#1E5E3A] mt-0.5">R$ {prod.preco.toFixed(2)}</p>
+                              <h4 className="text-xs font-bold text-[#0F2B5C] truncate">{prod.nome}</h4>
+                              <p className="text-[10px] font-extrabold text-[#0284C7] mt-0.5">R$ {prod.preco.toFixed(2)}</p>
                               {prod.estoque !== null && prod.estoque !== undefined && (
                                 <p className={`text-[9px] font-semibold ${isOutOfStock ? 'text-red-600 animate-pulse' : 'text-[#9C8E7B]'} mt-0.5`}>
                                   {isOutOfStock ? 'Sem Estoque (Não disponível)' : `Estoque: ${prod.estoque} un`}
@@ -3744,11 +3746,11 @@ export function AdminPanel({
                                     return { ...prev, itens: nextItens };
                                   });
                                 }}
-                                className="w-6 h-6 rounded-lg border border-[#E3DCD2] hover:bg-[#F4EFE6] disabled:opacity-30 text-[#706558] font-bold text-xs flex items-center justify-center cursor-pointer"
+                                className="w-6 h-6 rounded-lg border border-[#E2E8F0] hover:bg-[#F0F9FF] disabled:opacity-30 text-[#706558] font-bold text-xs flex items-center justify-center cursor-pointer"
                               >
                                 -
                               </button>
-                              <span className="text-xs font-black w-4 text-center text-[#1B3322]">{count}</span>
+                              <span className="text-xs font-black w-4 text-center text-[#0F2B5C]">{count}</span>
                               <button
                                 type="button"
                                 disabled={isOutOfStock || (prod.estoque !== null && prod.estoque !== undefined && count >= prod.estoque)}
@@ -3759,7 +3761,7 @@ export function AdminPanel({
                                     return { ...prev, itens: nextItens };
                                   });
                                 }}
-                                className="w-6 h-6 rounded-lg bg-[#1E5E3A] hover:bg-opacity-90 disabled:bg-gray-200 text-white font-bold text-xs flex items-center justify-center cursor-pointer"
+                                className="w-6 h-6 rounded-lg bg-[#0284C7] hover:bg-opacity-90 disabled:bg-gray-200 text-white font-bold text-xs flex items-center justify-center cursor-pointer"
                               >
                                 +
                               </button>
@@ -3771,9 +3773,9 @@ export function AdminPanel({
                 </div>
 
                 {/* Column Right (ColSpan 5) */}
-                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#E3DCD2] flex flex-col justify-between space-y-4">
+                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between space-y-4">
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider border-b border-[#E3DCD2] pb-2">Resumo do Pedido</h3>
+                    <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider border-b border-[#E2E8F0] pb-2">Resumo do Pedido</h3>
 
                     {/* Selected items list */}
                     <div className="space-y-2 max-h-[25vh] overflow-y-auto pr-1">
@@ -3781,9 +3783,9 @@ export function AdminPanel({
                         <p className="text-[11px] text-[#706558] italic text-center py-6">Nenhum item selecionado</p>
                       ) : (
                         selectedItemsWithQty.map(({ prod, prodId, quantidade }) => (
-                          <div key={prodId} className="flex justify-between items-center text-xs text-[#1B3322]">
+                          <div key={prodId} className="flex justify-between items-center text-xs text-[#0F2B5C]">
                             <span>
-                              <strong className="text-[#1E5E3A]">{quantidade}x</strong> {prod?.nome}
+                              <strong className="text-[#0284C7]">{quantidade}x</strong> {prod?.nome}
                             </span>
                             <span className="font-semibold text-[#706558]">R$ {((prod?.preco || 0) * quantidade).toFixed(2)}</span>
                           </div>
@@ -3792,19 +3794,19 @@ export function AdminPanel({
                     </div>
 
                     {/* Observações */}
-                    <div className="space-y-1 pt-2 border-t border-[#E3DCD2]">
+                    <div className="space-y-1 pt-2 border-t border-[#E2E8F0]">
                       <label className="text-[9px] font-extrabold text-[#706558] uppercase block">Observações do Pedido</label>
                       <textarea
                         placeholder="Ex: sem gelo e limão, ponto da carne..."
                         value={waiterOrderForm.observacoes}
                         onChange={(e) => setWaiterOrderForm(prev => ({ ...prev, observacoes: e.target.value }))}
-                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs text-[#1B3322] h-16 resize-none outline-none focus:ring-1 focus:ring-[#1E5E3A]"
+                        className="w-full px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs text-[#0F2B5C] h-16 resize-none outline-none focus:ring-1 focus:ring-[#0284C7]"
                       />
                     </div>
                   </div>
 
                   {/* Calculations & Submit */}
-                  <div className="space-y-3 pt-3 border-t border-[#E3DCD2]">
+                  <div className="space-y-3 pt-3 border-t border-[#E2E8F0]">
                     <div className="space-y-1.5 text-xs">
                       <div className="flex justify-between text-[#706558]">
                         <span>Subtotal</span>
@@ -3814,7 +3816,7 @@ export function AdminPanel({
                         <span>Taxa de Serviço ({config.taxa_servico}%)</span>
                         <span>R$ {(selectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0) * config.taxa_servico / 100).toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between text-sm font-black text-[#1E5E3A] border-t border-[#E3DCD2]/50 pt-2">
+                      <div className="flex justify-between text-sm font-black text-[#0284C7] border-t border-[#E2E8F0]/50 pt-2">
                         <span>Total Geral</span>
                         <span>R$ {(selectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0) * (1 + config.taxa_servico / 100)).toFixed(2)}</span>
                       </div>
@@ -3824,13 +3826,13 @@ export function AdminPanel({
                       <button
                         type="button"
                         onClick={() => setIsAddingOrder(false)}
-                        className="flex-1 py-2.5 bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322] font-bold text-xs rounded-xl cursor-pointer"
+                        className="flex-1 py-2.5 bg-white border border-[#E2E8F0] text-[#706558] hover:text-[#0F2B5C] font-bold text-xs rounded-xl cursor-pointer"
                       >
                         Cancelar
                       </button>
                       <button
                         type="submit"
-                        className="flex-1 py-2.5 bg-[#1E5E3A] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md shadow-green-100"
+                        className="flex-1 py-2.5 bg-[#0284C7] hover:bg-opacity-95 text-white font-bold text-xs rounded-xl cursor-pointer shadow-md shadow-sky-100"
                       >
                         Confirmar Pedido
                       </button>
@@ -3851,10 +3853,10 @@ export function AdminPanel({
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[#FCFBF9] w-full max-w-4xl rounded-[32px] border border-[#E3DCD2] shadow-2xl flex flex-col max-h-[90vh]"
+              className="bg-[#F8FAFC] w-full max-w-4xl rounded-[32px] border border-[#E2E8F0] shadow-2xl flex flex-col max-h-[90vh]"
             >
               {/* Modal Header */}
-              <div className="p-6 border-b border-[#E3DCD2] flex justify-between items-center bg-amber-600 text-white rounded-t-[32px]">
+              <div className="p-6 border-b border-[#E2E8F0] flex justify-between items-center bg-amber-600 text-white rounded-t-[32px]">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">🍻</span>
                   <div>
@@ -3883,7 +3885,7 @@ export function AdminPanel({
                       className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
                         counterCategoryFilter === 'all'
                           ? 'bg-amber-600 text-white border-amber-600'
-                          : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                          : 'bg-white text-[#706558] border-[#E2E8F0] hover:bg-[#F0F9FF]'
                       }`}
                     >
                       Todos
@@ -3896,7 +3898,7 @@ export function AdminPanel({
                         className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border cursor-pointer shrink-0 transition-all ${
                           counterCategoryFilter === cat.nome
                             ? 'bg-amber-600 text-white border-amber-600'
-                            : 'bg-white text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                            : 'bg-white text-[#706558] border-[#E2E8F0] hover:bg-[#F0F9FF]'
                         }`}
                       >
                         {cat.nome}
@@ -3917,11 +3919,11 @@ export function AdminPanel({
                           <div
                             key={prod.id}
                             className={`p-3 bg-white rounded-xl border flex gap-3 items-center justify-between transition-all ${
-                              count > 0 ? 'border-amber-600 bg-amber-50/10 ring-1 ring-amber-600/10' : 'border-[#E3DCD2]'
+                              count > 0 ? 'border-amber-600 bg-amber-50/10 ring-1 ring-amber-600/10' : 'border-[#E2E8F0]'
                             }`}
                           >
                             <div className="min-w-0 flex-1">
-                              <h4 className="text-xs font-bold text-[#1B3322] truncate">{prod.nome}</h4>
+                              <h4 className="text-xs font-bold text-[#0F2B5C] truncate">{prod.nome}</h4>
                               <p className="text-[10px] font-extrabold text-amber-600 mt-0.5">R$ {prod.preco.toFixed(2)}</p>
                               {prod.estoque !== null && prod.estoque !== undefined && (
                                 <p className={`text-[9px] font-semibold ${isOutOfStock ? 'text-red-600 animate-pulse' : 'text-[#9C8E7B]'} mt-0.5`}>
@@ -3946,11 +3948,11 @@ export function AdminPanel({
                                     return { ...prev, itens: nextItens };
                                   });
                                 }}
-                                className="w-6 h-6 rounded-lg border border-[#E3DCD2] hover:bg-[#F4EFE6] disabled:opacity-30 text-[#706558] font-bold text-xs flex items-center justify-center cursor-pointer"
+                                className="w-6 h-6 rounded-lg border border-[#E2E8F0] hover:bg-[#F0F9FF] disabled:opacity-30 text-[#706558] font-bold text-xs flex items-center justify-center cursor-pointer"
                               >
                                 -
                               </button>
-                              <span className="text-xs font-black w-4 text-center text-[#1B3322]">{count}</span>
+                              <span className="text-xs font-black w-4 text-center text-[#0F2B5C]">{count}</span>
                               <button
                                 type="button"
                                 disabled={isOutOfStock || (prod.estoque !== null && prod.estoque !== undefined && count >= prod.estoque)}
@@ -3973,9 +3975,9 @@ export function AdminPanel({
                 </div>
 
                 {/* Column Right (ColSpan 5) */}
-                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#E3DCD2] flex flex-col justify-between space-y-4">
+                <div className="lg:col-span-5 bg-white p-5 rounded-2xl border border-[#E2E8F0] flex flex-col justify-between space-y-4">
                   <div className="space-y-4">
-                    <h3 className="text-xs font-black text-[#1B3322] uppercase tracking-wider border-b border-[#E3DCD2] pb-2">Resumo da Venda</h3>
+                    <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider border-b border-[#E2E8F0] pb-2">Resumo da Venda</h3>
 
                     {/* Selected items list */}
                     <div className="space-y-2 max-h-[22vh] overflow-y-auto pr-1">
@@ -3983,7 +3985,7 @@ export function AdminPanel({
                         <p className="text-[11px] text-[#706558] italic text-center py-6">Nenhum produto selecionado</p>
                       ) : (
                         counterSelectedItemsWithQty.map(({ prod, prodId, quantidade }) => (
-                          <div key={prodId} className="flex justify-between items-center text-xs text-[#1B3322]">
+                          <div key={prodId} className="flex justify-between items-center text-xs text-[#0F2B5C]">
                             <span>
                               <strong className="text-amber-600">{quantidade}x</strong> {prod?.nome}
                             </span>
@@ -3994,7 +3996,7 @@ export function AdminPanel({
                     </div>
 
                     {/* Forma de Pagamento */}
-                    <div className="space-y-2 pt-2 border-t border-[#E3DCD2]">
+                    <div className="space-y-2 pt-2 border-t border-[#E2E8F0]">
                       <label className="text-[10px] font-extrabold text-[#706558] uppercase block">Forma de Pagamento (Recebido na Hora)</label>
                       <div className="grid grid-cols-2 gap-2">
                         {[
@@ -4010,7 +4012,7 @@ export function AdminPanel({
                             className={`py-2 px-3 text-xs font-bold rounded-xl border text-center transition-all cursor-pointer ${
                               counterSaleForm.pagamento === method.id
                                 ? 'bg-amber-600 text-white border-amber-600 shadow-sm'
-                                : 'bg-[#FCFBF9] text-[#706558] border-[#E3DCD2] hover:bg-[#F4EFE6]'
+                                : 'bg-[#F8FAFC] text-[#706558] border-[#E2E8F0] hover:bg-[#F0F9FF]'
                             }`}
                           >
                             {method.label}
@@ -4020,21 +4022,21 @@ export function AdminPanel({
                     </div>
 
                     {/* Observações */}
-                    <div className="space-y-1 pt-2 border-t border-[#E3DCD2]">
+                    <div className="space-y-1 pt-2 border-t border-[#E2E8F0]">
                       <label className="text-[9px] font-extrabold text-[#706558] uppercase block">Observações / Detalhes</label>
                       <textarea
                         placeholder="Ex: sem gelo, observação do cliente..."
                         value={counterSaleForm.observacoes}
                         onChange={(e) => setCounterSaleForm(prev => ({ ...prev, observacoes: e.target.value }))}
-                        className="w-full px-3 py-2 bg-[#FCFBF9] border border-[#E3DCD2] rounded-xl text-xs text-[#1B3322] h-12 resize-none outline-none focus:ring-1 focus:ring-amber-600"
+                        className="w-full px-3 py-2 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl text-xs text-[#0F2B5C] h-12 resize-none outline-none focus:ring-1 focus:ring-amber-600"
                       />
                     </div>
                   </div>
 
                   {/* Calculations & Submit */}
-                  <div className="space-y-3 pt-3 border-t border-[#E3DCD2]">
+                  <div className="space-y-3 pt-3 border-t border-[#E2E8F0]">
                     <div className="space-y-1.5 text-xs">
-                      <div className="flex justify-between text-sm font-black text-amber-600 border-t border-[#E3DCD2]/50 pt-2">
+                      <div className="flex justify-between text-sm font-black text-amber-600 border-t border-[#E2E8F0]/50 pt-2">
                         <span>Total a Receber</span>
                         <span>R$ {counterSelectedItemsWithQty.reduce((acc, item) => acc + (item.prod?.preco || 0) * item.quantidade, 0).toFixed(2)}</span>
                       </div>
@@ -4044,7 +4046,7 @@ export function AdminPanel({
                       <button
                         type="button"
                         onClick={() => setIsCounterSale(false)}
-                        className="flex-1 py-2.5 bg-white border border-[#E3DCD2] text-[#706558] hover:text-[#1B3322] font-bold text-xs rounded-xl cursor-pointer"
+                        className="flex-1 py-2.5 bg-white border border-[#E2E8F0] text-[#706558] hover:text-[#0F2B5C] font-bold text-xs rounded-xl cursor-pointer"
                       >
                         Cancelar
                       </button>

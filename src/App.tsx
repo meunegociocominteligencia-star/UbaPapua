@@ -523,18 +523,35 @@ export default function App() {
             );
             showToast(`Mesa ${data.quiosque} (${data.cliente_nome}) solicitou o fechamento da conta!`, 'warning');
           } else if (data.type === 'bill_paid') {
+            const currentNormQuiosque = clienteQuiosque ? normalizeString(clienteQuiosque) : '';
+            const currentNormNome = clienteNome ? normalizeString(clienteNome) : '';
+            const eventNormQuiosque = normalizeString(data.quiosque);
+            const eventNormNome = normalizeString(data.cliente_nome);
+
+            const isCurrentClient = Boolean(currentNormQuiosque && currentNormNome &&
+              currentNormQuiosque === eventNormQuiosque &&
+              (currentNormNome === eventNormNome || currentNormNome.split(' ')[0] === eventNormNome.split(' ')[0]));
+
             setOrders((prev) =>
               prev.map((o) => {
+                const orderKiosk = normalizeString(o.quiosque);
+                const orderName = normalizeString(o.cliente_nome);
                 if (
-                  o.quiosque.toLowerCase() === data.quiosque.toLowerCase() &&
-                  o.cliente_nome.toLowerCase() === data.cliente_nome.toLowerCase()
+                  orderKiosk === eventNormQuiosque &&
+                  (orderName === eventNormNome || orderName.split(' ')[0] === eventNormNome.split(' ')[0])
                 ) {
-                  return { ...o, status: 'Entregue', conta_solicitada: false };
+                  return { ...o, status: 'Entregue', conta_solicitada: false, pago: true };
                 }
                 return o;
               })
             );
-            showToast(`Conta da mesa ${data.quiosque} (${data.cliente_nome}) foi fechada!`, 'success');
+
+            if (isCurrentClient) {
+              setActiveView('orders_status');
+              showToast('Sua conta foi paga! Você já pode baixar seu comprovante.', 'success');
+            } else {
+              showToast(`Conta da mesa ${data.quiosque} (${data.cliente_nome}) foi fechada!`, 'success');
+            }
           } else if (data.type === 'product_created' || data.type === 'product_updated' || data.type === 'product_deleted') {
             // Refetch or update products
             fetch(getApiUrl('/api/products'))
@@ -1770,43 +1787,45 @@ export default function App() {
   useEffect(() => {
     const fetchLocalHistories = async () => {
       const cachedHistories = await offlineDB.getOrderHistories();
+      const normCliNome = clienteNome ? normalizeString(clienteNome) : '';
+      const normCliQuiosque = clienteQuiosque ? normalizeString(clienteQuiosque) : '';
       
       // Filter cached history list and include matching orders from current session start
       const filteredCached = cachedHistories.filter(
         (o) => {
-          const isMatchingClient = o.cliente_telefone === clienteCelular || (o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque);
-          if (!isMatchingClient) return false;
+          const isMatchingPhone = Boolean(clienteCelular && o.cliente_telefone && o.cliente_telefone === clienteCelular);
+          const isMatchingKioskAndName = normCliNome && normCliQuiosque &&
+            normalizeString(o.cliente_nome) === normCliNome &&
+            normalizeString(o.quiosque) === normCliQuiosque;
+          if (!isMatchingPhone && !isMatchingKioskAndName) return false;
           
           if (clienteSessionStart) {
             return new Date(o.created_at).getTime() >= new Date(clienteSessionStart).getTime();
           }
-          return !o.pago; // Fallback to avoid older paid ones if session start is missing
+          return true;
         }
       );
 
       // Combine with active orders from current session start
       const matchingActive = orders.filter((o) => {
-        let isMatchingClient = false;
-        if (clienteCelular && o.cliente_telefone) {
-          isMatchingClient = o.cliente_telefone === clienteCelular;
-        } else {
-          isMatchingClient = o.cliente_nome === clienteNome && o.quiosque === clienteQuiosque;
-        }
-        if (!isMatchingClient) return false;
+        const isMatchingPhone = Boolean(clienteCelular && o.cliente_telefone && o.cliente_telefone === clienteCelular);
+        const isMatchingKioskAndName = normCliNome && normCliQuiosque &&
+          normalizeString(o.cliente_nome) === normCliNome &&
+          normalizeString(o.quiosque) === normCliQuiosque;
+        if (!isMatchingPhone && !isMatchingKioskAndName) return false;
 
         if (clienteSessionStart) {
           return new Date(o.created_at).getTime() >= new Date(clienteSessionStart).getTime();
         }
-        return !o.pago; // Fallback to avoid older paid ones if session start is missing
+        return true;
       });
 
-      // Unique-fy based on order ID
-      const allMerged = [...matchingActive, ...filteredCached];
-      const unique = allMerged.filter(
-        (value, index, self) => self.findIndex((o) => o.id === value.id) === index
-      );
+      // Merge order map where live server state (matchingActive) takes priority
+      const orderMap = new Map<string, Pedido>();
+      filteredCached.forEach((o) => orderMap.set(o.id, o));
+      matchingActive.forEach((o) => orderMap.set(o.id, o));
 
-      // Sort by latest
+      const unique = Array.from(orderMap.values());
       unique.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
       setLocalOrderHistoryList(unique);
     };
@@ -1815,6 +1834,17 @@ export default function App() {
       fetchLocalHistories();
     }
   }, [orders, clienteNome, clienteQuiosque, clienteCelular, clienteSessionStart]);
+
+  // When all active orders for the current customer are confirmed paid, redirect to orders_status so the receipt modal displays
+  useEffect(() => {
+    if (localOrderHistoryList.length > 0 && activeView === 'cardapio') {
+      const unpaid = localOrderHistoryList.filter(o => o.status !== 'Cancelado' && !o.pago);
+      const paid = localOrderHistoryList.filter(o => o.status !== 'Cancelado' && o.pago);
+      if (unpaid.length === 0 && paid.length > 0) {
+        setActiveView('orders_status');
+      }
+    }
+  }, [localOrderHistoryList, activeView]);
 
   return (
     <div className="relative min-h-screen bg-[#FDFBF7] text-[#1A2E35] font-sans selection:bg-[#0077BE] selection:text-white pb-16">

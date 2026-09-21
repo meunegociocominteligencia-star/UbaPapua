@@ -1,21 +1,21 @@
 {
-  "short_name": "Bella Costa",
-  "name": "Ubá Papuá - Cardápio Digital",
+  "short_name": "Moju Park",
+  "name": "Moju Park - Cardápio Digital",
   "icons": [
     {
-      "src": "https://images.unsplash.com/photo-1525385133375-80955641da08?w=192&auto=format&fit=crop",
-      "type": "image/jpeg",
-      "sizes": "192x192"
+      "src": "/moju-park-logo.svg",
+      "type": "image/svg+xml",
+      "sizes": "192x192 512x512"
     },
     {
-      "src": "https://images.unsplash.com/photo-1525385133375-80955641da08?w=512&auto=format&fit=crop",
+      "src": "/moju-park-logo.jpg",
       "type": "image/jpeg",
       "sizes": "512x512"
     }
   ],
   "start_url": "/",
-  "background_color": "#0F172A",
-  "theme_color": "#0EA5E9",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0284C7",
   "display": "standalone",
   "orientation": "portrait"
 }

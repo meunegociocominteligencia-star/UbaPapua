@@ -1,6 +1,6 @@
 {
-  "name": "UbáPapuá",
-  "description": "A complete, modern, offline-first digital menu and order management system for beach kiosks and bars.",
+  "name": "Moju Park",
+  "description": "Cardápio digital e sistema de pedidos oficial do parque aquático Moju Park.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

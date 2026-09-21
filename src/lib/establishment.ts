@@ -117,11 +117,11 @@ export const DEFAULT_PRODUTOS: Produto[] = [
 ];
 
 export const DEFAULT_CONFIG: ConfigEstabelecimento = {
-  nome: 'UbáPapuá',
-  logo: '🥥',
-  telefone: '(11) 99999-8888',
-  endereco: 'Av. Beira Mar, Quiosque 42 - Praia Central, Ubatuba/SP',
+  nome: 'Moju Park',
+  logo: '/moju-park-logo.svg',
+  telefone: '(91) 98765-4321',
+  endereco: 'Parque Aquático Moju Park',
   taxa_servico: 10, // 10%
-  mensagem_inicial: 'Bem-vindo ao UbáPapuá! Desfrute de momentos inesquecíveis à beira-mar. Faça seu pedido diretamente por aqui!',
-  horario_funcionamento: 'Todos os dias, das 08h às 20h'
+  mensagem_inicial: 'Bem-vindo ao Moju Park! Desfrute de momentos inesquecíveis no parque aquático. Faça seu pedido diretamente por aqui!',
+  horario_funcionamento: 'Todos os dias, das 09h às 18h'
 };

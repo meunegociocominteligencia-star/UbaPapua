@@ -1,6 +1,6 @@
 {
-  "appId": "com.ubapapua.cardapio",
-  "appName": "Ubá Papuá",
+  "appId": "com.mojupark.cardapio",
+  "appName": "Moju Park",
   "webDir": "dist",
   "server": {
     "androidScheme": "https",
