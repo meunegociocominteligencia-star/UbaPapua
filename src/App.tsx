@@ -677,35 +677,131 @@ export default function App() {
     safeStorage.setItem('cliente_quiosque', quiosque);
     safeStorage.setItem('cliente_celular', celular);
     safeStorage.setItem('cliente_session_start', sessionStart);
-  
-    // Save to database
-    const realSupabase = getSupabase();
-    if (realSupabase && hasSupabaseConfig) {
-      try {
-        await realSupabase.from('clientes').upsert({
-          telefone: celular,
-          nome,
-          quiosque,
-          celular,
-          created_at: new Date().toISOString()
-        }, { onConflict: 'telefone' });
-      } catch (err) {
-        console.error('Error inserting client into Supabase:', err);
+
+    // Immediate local state update for instant reactivity in Admin and Waiter screens
+    const localCliId = celular || 'cli_' + Date.now();
+    const newLocalClient: Cliente = {
+      id: localCliId,
+      nome,
+      quiosque,
+      celular,
+      telefone: celular,
+      status_conta: 'Conta em Aberto',
+      valor_total_conta: 0,
+      created_at: sessionStart
+    };
+
+    setClientes((prev) => {
+      const idx = prev.findIndex((c) => c.telefone === celular || c.celular === celular || c.id === localCliId);
+      if (idx >= 0) {
+        const copy = [...prev];
+        copy[idx] = { ...copy[idx], nome, quiosque, celular, status_conta: 'Conta em Aberto' };
+        return copy;
       }
-    } else {
+      return [newLocalClient, ...prev];
+    });
+  
+    // Save to Supabase database
+    const realSupabase = getSupabase();
+    let savedOnline = false;
+    let onlineWarning = '';
+
+    if (realSupabase) {
       try {
-        await fetch(getApiUrl('/api/clients'), {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nome, quiosque, celular, telefone: celular })
-        });
-      } catch (err) {
-        console.error('Error registering client locally:', err);
+        const cleanPhone = celular.replace(/\D/g, '');
+        // Search if client exists by any phone variation
+        const { data: existing, error: searchErr } = await realSupabase
+          .from('clientes')
+          .select('*')
+          .or(`telefone.eq.${celular},celular.eq.${celular},telefone.eq.${cleanPhone}`)
+          .limit(1);
+
+        if (!searchErr && existing && existing.length > 0) {
+          const match = existing[0];
+          const matchKey = match.telefone ? 'telefone' : 'id';
+          const matchVal = match.telefone || match.id;
+          const { error: updErr } = await realSupabase
+            .from('clientes')
+            .update({
+              nome,
+              quiosque,
+              celular,
+              status_conta: 'Conta em Aberto',
+              created_at: new Date().toISOString()
+            })
+            .eq(matchKey, matchVal);
+
+          if (!updErr) {
+            savedOnline = true;
+          } else {
+            console.warn('Aviso ao atualizar cliente no Supabase:', updErr);
+            onlineWarning = updErr.message;
+          }
+        } else {
+          // Attempt 1: Full insert with UUID id and formatted phone
+          const { error: insErr } = await realSupabase
+            .from('clientes')
+            .insert({
+              id: generateUUID(),
+              telefone: celular,
+              celular: celular,
+              nome,
+              quiosque,
+              status_conta: 'Conta em Aberto',
+              valor_total_conta: 0,
+              created_at: new Date().toISOString()
+            });
+
+          if (!insErr) {
+            savedOnline = true;
+          } else {
+            console.warn('Tentativa 1 com UUID falhou, tentando alternativa sem UUID:', insErr);
+            // Attempt 2: Fallback insert without UUID (in case table has no id column)
+            const { error: insErr2 } = await realSupabase
+              .from('clientes')
+              .insert({
+                telefone: celular,
+                celular: celular,
+                nome,
+                quiosque,
+                status_conta: 'Conta em Aberto',
+                valor_total_conta: 0,
+                created_at: new Date().toISOString()
+              });
+
+            if (!insErr2) {
+              savedOnline = true;
+            } else {
+              console.error('Falha ao inserir cliente no Supabase:', insErr2);
+              onlineWarning = insErr2.message || insErr.message;
+            }
+          }
+        }
+      } catch (err: any) {
+        onlineWarning = err?.message || String(err);
+        console.error('Exceção ao inserir cliente no Supabase:', err);
       }
     }
 
+    // Local server storage fallback
+    try {
+      await fetch(getApiUrl('/api/clients'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome, quiosque, celular, telefone: celular })
+      });
+    } catch (err) {
+      console.error('Erro salvando cliente no servidor local:', err);
+    }
+
     setActiveView('cardapio');
-    showToast(`Bem-vindo, ${nome}! Boas compras.`, 'success');
+    if (savedOnline) {
+      showToast(`Bem-vindo, ${nome}! Dados gravados no banco Supabase com sucesso.`, 'success');
+    } else if (onlineWarning) {
+      showToast(`Bem-vindo, ${nome}! Aviso Supabase: ${onlineWarning}. Verifique a tabela 'clientes' e RLS no SQL Editor.`, 'warning');
+    } else {
+      showToast(`Bem-vindo, ${nome}! Boas compras.`, 'success');
+    }
   };
 
   // Log out or change kiosk table session
@@ -1519,49 +1615,84 @@ export default function App() {
   };
 
   const handleAddClient = async (cli: Omit<Cliente, 'id'>) => {
+    const fallbackId = cli.telefone || cli.celular || 'cli_' + Date.now();
+    const newLocalClient: Cliente = {
+      id: fallbackId,
+      ...cli,
+      telefone: cli.telefone || cli.celular,
+      celular: cli.celular || cli.telefone,
+      created_at: new Date().toISOString()
+    };
+
     try {
       const realSupabase = getSupabase();
-      const clientData = {
-        ...cli,
-        telefone: cli.telefone || cli.celular
+      const phoneVal = cli.telefone || cli.celular;
+      const clientPayload = {
+        id: generateUUID(),
+        nome: cli.nome,
+        quiosque: cli.quiosque,
+        telefone: phoneVal,
+        celular: cli.celular || phoneVal,
+        status_conta: cli.status_conta || 'Conta em Aberto',
+        valor_total_conta: cli.valor_total_conta || 0,
+        created_at: new Date().toISOString()
       };
-      if (realSupabase && hasSupabaseConfig) {
-        const { data, error } = await realSupabase.from('clientes').insert(clientData).select();
-        if (error) throw error;
-        
-        if (data && data[0]) {
+
+      if (realSupabase) {
+        let inserted = false;
+        // Attempt 1: with UUID id
+        const { data, error } = await realSupabase.from('clientes').insert(clientPayload).select();
+        if (!error && data && data[0]) {
+          inserted = true;
           const mappedNew = {
-            id: data[0].telefone || data[0].celular || 'c_' + Math.random().toString(36).substr(2, 9),
+            id: data[0].telefone || data[0].id || fallbackId,
             ...data[0]
           };
-          setClientes((prev) => [mappedNew, ...prev]);
+          setClientes((prev) => [mappedNew, ...prev.filter(c => c.id !== mappedNew.id)]);
         } else {
-          const { data: allClis } = await realSupabase.from('clientes').select('*').order('created_at', { ascending: false });
-          if (allClis) {
-            setClientes(allClis.map((c: any) => ({
-              id: c.telefone || c.celular || 'c_' + Math.random().toString(36).substr(2, 9),
-              ...c
-            })));
+          // Attempt 2: without UUID id in case table has no id column
+          const { data: data2, error: error2 } = await realSupabase.from('clientes').insert({
+            nome: cli.nome,
+            quiosque: cli.quiosque,
+            telefone: phoneVal,
+            celular: cli.celular || phoneVal,
+            status_conta: cli.status_conta || 'Conta em Aberto',
+            valor_total_conta: cli.valor_total_conta || 0,
+            created_at: new Date().toISOString()
+          }).select();
+
+          if (!error2 && data2 && data2[0]) {
+            inserted = true;
+            const mappedNew = {
+              id: data2[0].telefone || fallbackId,
+              ...data2[0]
+            };
+            setClientes((prev) => [mappedNew, ...prev.filter(c => c.id !== mappedNew.id)]);
+          } else {
+            console.warn('Supabase cliente insert retornou aviso:', error2 || error);
+            // Save locally
+            setClientes((prev) => [newLocalClient, ...prev.filter(c => c.id !== newLocalClient.id)]);
           }
         }
       } else {
         const res = await fetch(getApiUrl('/api/clients'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(clientData)
+          body: JSON.stringify(clientPayload)
         });
-        if (!res.ok) throw new Error('Falha ao cadastrar cliente no servidor');
-        const newCli = await res.json();
-        
-        setClientes((prev) => {
-          if (prev.some((c) => c.id === newCli.id)) return prev;
-          return [newCli, ...prev];
-        });
+        if (res.ok) {
+          const newCli = await res.json();
+          setClientes((prev) => [newCli, ...prev.filter(c => c.id !== newCli.id)]);
+        } else {
+          setClientes((prev) => [newLocalClient, ...prev.filter(c => c.id !== newLocalClient.id)]);
+        }
       }
       showToast('Cliente cadastrado com sucesso.', 'success');
     } catch (err: any) {
       console.error('Failed to add client:', err);
-      showToast(`Erro ao cadastrar cliente: ${err.message || err}`, 'error');
+      // Ensure local state receives the client anyway
+      setClientes((prev) => [newLocalClient, ...prev.filter(c => c.id !== newLocalClient.id)]);
+      showToast(`Cliente salvo localmente (${err.message || err}).`, 'warning');
     }
   };
 

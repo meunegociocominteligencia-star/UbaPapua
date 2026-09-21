@@ -5,27 +5,151 @@
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = (import.meta as any).env.VITE_SUPABASE_URL || 'https://tilpkngvdadkciyfrigp.supabase.co';
-const supabaseAnonKey = (import.meta as any).env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpbHBrbmd2ZGFka2NpeWZyaWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2Nzc2MTgsImV4cCI6MjA5OTI1MzYxOH0.gJeyx9rZMdt3hykUCk2nTo9xOYSu2DXVPwQoz8nXDMQ';
+export interface SupabaseConfigInfo {
+  url: string;
+  anonKey: string;
+  isCustom: boolean;
+  source: 'custom' | 'env' | 'fallback';
+}
 
-export const hasSupabaseConfig = !!(supabaseUrl && supabaseAnonKey && supabaseUrl !== 'https://your-project-id.supabase.co');
+export function getSupabaseConfig(): SupabaseConfigInfo {
+  let customUrl = '';
+  let customKey = '';
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      customUrl = window.localStorage.getItem('custom_supabase_url') || '';
+      customKey = window.localStorage.getItem('custom_supabase_anon_key') || '';
+    } catch {}
+  }
+
+  if (customUrl.trim() && customKey.trim()) {
+    return {
+      url: customUrl.trim(),
+      anonKey: customKey.trim(),
+      isCustom: true,
+      source: 'custom'
+    };
+  }
+
+  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL;
+  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY;
+  if (envUrl && envKey && envUrl !== 'https://your-project-id.supabase.co') {
+    return {
+      url: envUrl.trim(),
+      anonKey: envKey.trim(),
+      isCustom: false,
+      source: 'env'
+    };
+  }
+
+  return {
+    url: 'https://tilpkngvdadkciyfrigp.supabase.co',
+    anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpbHBrbmd2ZGFka2NpeWZyaWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM2Nzc2MTgsImV4cCI6MjA5OTI1MzYxOH0.gJeyx9rZMdt3hykUCk2nTo9xOYSu2DXVPwQoz8nXDMQ',
+    isCustom: false,
+    source: 'fallback'
+  };
+}
+
+export function saveCustomSupabaseConfig(url: string, anonKey: string) {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    try {
+      if (!url.trim() && !anonKey.trim()) {
+        window.localStorage.removeItem('custom_supabase_url');
+        window.localStorage.removeItem('custom_supabase_anon_key');
+      } else {
+        window.localStorage.setItem('custom_supabase_url', url.trim());
+        window.localStorage.setItem('custom_supabase_anon_key', anonKey.trim());
+      }
+    } catch {}
+    supabaseInstance = null;
+  }
+}
+
+export const hasSupabaseConfig = true;
 
 let supabaseInstance: SupabaseClient | null = null;
+let currentClientUrl = '';
 
 export function getSupabase(): SupabaseClient | null {
-  if (!hasSupabaseConfig) {
+  const config = getSupabaseConfig();
+  if (!config.url || !config.anonKey) {
     return null;
   }
 
-  if (!supabaseInstance) {
+  if (!supabaseInstance || currentClientUrl !== config.url) {
     try {
-      supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+      supabaseInstance = createClient(config.url, config.anonKey);
+      currentClientUrl = config.url;
     } catch (err) {
       console.error('Failed to initialize Supabase client:', err);
+      return null;
     }
   }
 
   return supabaseInstance;
+}
+
+export async function testSupabaseLiveConnection(): Promise<{
+  success: boolean;
+  url: string;
+  source: string;
+  latencyMs: number;
+  message: string;
+}> {
+  const config = getSupabaseConfig();
+  const client = getSupabase();
+  if (!client) {
+    return {
+      success: false,
+      url: config.url,
+      source: config.source,
+      latencyMs: 0,
+      message: 'Não foi possível inicializar o cliente Supabase. Verifique a URL e a Chave Anon.'
+    };
+  }
+
+  const start = Date.now();
+  try {
+    const { error } = await client.from('categorias').select('count', { count: 'exact', head: true });
+    const latencyMs = Date.now() - start;
+
+    if (error) {
+      const isMissingTable = error.code === '42P01' || (error.message && error.message.toLowerCase().includes('does not exist'));
+      if (isMissingTable) {
+        return {
+          success: true,
+          url: config.url,
+          source: config.source,
+          latencyMs,
+          message: `Conexão com o Supabase estabelecida com sucesso (${latencyMs}ms)! Nota: o banco respondeu, mas a tabela "categorias" ainda não foi criada via SQL.`
+        };
+      }
+      return {
+        success: false,
+        url: config.url,
+        source: config.source,
+        latencyMs,
+        message: `Servidor Supabase respondeu com código ${error.code}: ${error.message}`
+      };
+    }
+
+    return {
+      success: true,
+      url: config.url,
+      source: config.source,
+      latencyMs,
+      message: `Conectado ao Supabase com sucesso em ${latencyMs}ms!`
+    };
+  } catch (err: any) {
+    const latencyMs = Date.now() - start;
+    return {
+      success: false,
+      url: config.url,
+      source: config.source,
+      latencyMs,
+      message: `Falha de rede ao conectar no Supabase: ${err.message || String(err)}`
+    };
+  }
 }
 
 // SQL Script generator for the user's Supabase dashboard

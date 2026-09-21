@@ -62,7 +62,11 @@ import {
   checkAllSupabaseTables, 
   TableDiagnosticResult, 
   hasSupabaseConfig, 
-  getSupabase 
+  getSupabase,
+  getSupabaseConfig,
+  saveCustomSupabaseConfig,
+  testSupabaseLiveConnection,
+  SupabaseConfigInfo
 } from '../lib/supabase';
 import { getApiUrl } from '../lib/api';
 
@@ -310,6 +314,61 @@ export function AdminPanel({
       console.error('Error running table diagnostics:', e);
     } finally {
       setIsCheckingTables(false);
+    }
+  };
+
+  // Custom Supabase Connection Configuration
+  const [supabaseConfigInfo, setSupabaseConfigInfo] = useState<SupabaseConfigInfo>(() => getSupabaseConfig());
+  const [inputSupabaseUrl, setInputSupabaseUrl] = useState(() => getSupabaseConfig().url);
+  const [inputSupabaseKey, setInputSupabaseKey] = useState(() => getSupabaseConfig().anonKey);
+  const [isEditingSupabaseConfig, setIsEditingSupabaseConfig] = useState(false);
+  const [liveTestState, setLiveTestState] = useState<{
+    running: boolean;
+    result: { success: boolean; url: string; latencyMs: number; message: string } | null;
+  }>({ running: false, result: null });
+
+  const handleTestLiveConnection = async () => {
+    setLiveTestState({ running: true, result: null });
+    try {
+      const res = await testSupabaseLiveConnection();
+      setLiveTestState({ running: false, result: res });
+      // If connected, update tables status
+      runTableDiagnostics();
+    } catch (err: any) {
+      setLiveTestState({
+        running: false,
+        result: {
+          success: false,
+          url: supabaseConfigInfo.url,
+          latencyMs: 0,
+          message: err?.message || 'Falha ao testar conexão'
+        }
+      });
+    }
+  };
+
+  const handleSaveCustomSupabase = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputSupabaseUrl.trim() || !inputSupabaseKey.trim()) {
+      alert('Por favor, informe a URL do Projeto e a Chave Pública Anon.');
+      return;
+    }
+    saveCustomSupabaseConfig(inputSupabaseUrl.trim(), inputSupabaseKey.trim());
+    const updated = getSupabaseConfig();
+    setSupabaseConfigInfo(updated);
+    setIsEditingSupabaseConfig(false);
+    handleTestLiveConnection();
+  };
+
+  const handleResetSupabaseConfig = () => {
+    if (confirm('Deseja restaurar as credenciais originais do sistema?')) {
+      saveCustomSupabaseConfig('', '');
+      const updated = getSupabaseConfig();
+      setSupabaseConfigInfo(updated);
+      setInputSupabaseUrl(updated.url);
+      setInputSupabaseKey(updated.anonKey);
+      setIsEditingSupabaseConfig(false);
+      handleTestLiveConnection();
     }
   };
 
@@ -3732,14 +3791,38 @@ export function AdminPanel({
                 <p className="text-xs text-[#706558]">Instruções para salvar dados persistentemente na nuvem com PostgreSQL</p>
               </div>
 
-              {/* Status card */}
+              {/* Status and Active Configuration Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-5 bg-white border border-[#E2E8F0] rounded-2xl space-y-3 shadow-sm">
-                  <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Status da Conexão</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Status da Conexão</h3>
+                    <button
+                      type="button"
+                      onClick={handleTestLiveConnection}
+                      disabled={liveTestState.running}
+                      className="px-2.5 py-1 bg-[#0284C7]/10 hover:bg-[#0284C7]/20 text-[#0284C7] font-bold text-[11px] rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                    >
+                      {liveTestState.running ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-[#0284C7] border-t-transparent" />
+                          <span>Testando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Check className="h-3 w-3" />
+                          <span>Testar Conexão</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="flex items-center gap-3">
                     <div
                       className={`w-3.5 h-3.5 rounded-full ${
-                        supabaseStatus === 'connected'
+                        liveTestState.result?.success
+                          ? 'bg-emerald-500'
+                          : liveTestState.result && !liveTestState.result.success
+                          ? 'bg-red-500'
+                          : supabaseStatus === 'connected'
                           ? 'bg-emerald-500'
                           : supabaseStatus === 'disconnected'
                           ? 'bg-red-500'
@@ -3747,29 +3830,162 @@ export function AdminPanel({
                       }`}
                     />
                     <span className="text-sm font-bold text-[#0F2B5C]">
-                      {supabaseStatus === 'connected'
+                      {liveTestState.result
+                        ? liveTestState.result.success
+                          ? 'Conexão Supabase Ativa e Respondendo'
+                          : 'Erro de Conexão com Supabase'
+                        : supabaseStatus === 'connected'
                         ? 'Conectado com Supabase Cloud Database'
                         : supabaseStatus === 'disconnected'
                         ? 'Desconectado / Erro de Conexão'
                         : 'Modo Local Simulado (Sem Chaves Configuradas)'}
                     </span>
                   </div>
+
+                  {liveTestState.result && (
+                    <div className={`p-2.5 rounded-xl text-xs font-medium ${
+                      liveTestState.result.success 
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' 
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
+                      {liveTestState.result.message}
+                    </div>
+                  )}
+
                   <p className="text-[11px] text-[#706558] leading-normal">
                     {supabaseStatus === 'unconfigured'
                       ? 'O sistema está rodando em modo local/offline inteligente auto-reparável com Server-Sent Events em tempo real para fins de demonstração imediata.'
-                      : 'O sistema está conectado diretamente à sua instância na nuvem do Supabase, realizando mutações persistentes e escutando transmissões em tempo real.'}
+                      : 'O sistema realiza mutações persistentes e escuta transmissões em tempo real diretamente da sua instância Supabase.'}
                   </p>
                 </div>
 
                 <div className="p-5 bg-white border border-[#E2E8F0] rounded-2xl space-y-3 shadow-sm">
-                  <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Variáveis de Ambiente</h3>
-                  <div className="space-y-1 text-[11px] text-[#0F2B5C] font-mono">
-                    <p>VITE_SUPABASE_URL: <span className="text-[#0284C7] font-bold">{hasSupabaseConfig ? 'Configurado' : 'Não Configurado'}</span></p>
-                    <p>VITE_SUPABASE_ANON_KEY: <span className="text-[#0284C7] font-bold">{hasSupabaseConfig ? 'Configurado' : 'Não Configurado'}</span></p>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider">Instância Supabase Ativa</h3>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      supabaseConfigInfo.source === 'custom'
+                        ? 'bg-purple-100 text-purple-700'
+                        : supabaseConfigInfo.source === 'env'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {supabaseConfigInfo.source === 'custom' 
+                        ? 'Configurado no Painel' 
+                        : supabaseConfigInfo.source === 'env' 
+                        ? 'Vercel / Vite (.env)' 
+                        : 'Padrão Scaffolding'}
+                    </span>
                   </div>
-                  <p className="text-[11px] text-[#706558] leading-normal">
-                    Adicione estas variáveis no arquivo <strong>.env</strong> localmente ou através da aba de Configurações no AI Studio para conectar seu próprio banco.
+                  
+                  <div className="space-y-1.5 text-[11px] text-[#0F2B5C] font-mono bg-[#F8FAFC] p-2.5 rounded-xl border border-[#E2E8F0] break-all">
+                    <div>
+                      <span className="text-[#706558] block text-[10px] font-sans font-bold uppercase">URL do Projeto:</span>
+                      <span className="text-[#0284C7] font-bold select-all">{supabaseConfigInfo.url}</span>
+                    </div>
+                    <div className="pt-1">
+                      <span className="text-[#706558] block text-[10px] font-sans font-bold uppercase">Chave Anon:</span>
+                      <span className="text-[#475569]">{supabaseConfigInfo.anonKey.substring(0, 20)}...{supabaseConfigInfo.anonKey.substring(supabaseConfigInfo.anonKey.length - 8)}</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingSupabaseConfig(!isEditingSupabaseConfig)}
+                      className="px-3 py-1.5 bg-[#0F2B5C] hover:bg-[#0F2B5C]/90 text-white font-bold text-xs rounded-xl transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <Settings className="h-3 w-3" />
+                      <span>{isEditingSupabaseConfig ? 'Fechar Edição' : 'Conectar Meu Próprio Projeto'}</span>
+                    </button>
+                    {supabaseConfigInfo.isCustom && (
+                      <button
+                        type="button"
+                        onClick={handleResetSupabaseConfig}
+                        className="px-2.5 py-1.5 text-xs text-[#706558] hover:text-red-600 font-bold transition-all cursor-pointer"
+                      >
+                        Restaurar Padrão
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Form to connect user's own Supabase project directly without rebuilding */}
+              {isEditingSupabaseConfig && (
+                <div className="p-5 bg-[#F0FDF4] border border-emerald-300 rounded-2xl space-y-4 shadow-md">
+                  <div className="flex items-center justify-between border-b border-emerald-200 pb-2">
+                    <div>
+                      <h4 className="text-sm font-bold text-[#0F2B5C] font-serif italic">Conectar Outro Projeto Supabase</h4>
+                      <p className="text-xs text-[#475569]">
+                        Cole a URL e a Anon Key do seu projeto Supabase abaixo. Ele será salvo no seu navegador e conectado imediatamente, sem necessidade de novo deploy na Vercel!
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSaveCustomSupabase} className="space-y-3">
+                    <div>
+                      <label className="text-xs font-bold text-[#0F2B5C] block mb-1">
+                        URL do Projeto (ex: https://xyzcompany.supabase.co)
+                      </label>
+                      <input
+                        type="text"
+                        value={inputSupabaseUrl}
+                        onChange={(e) => setInputSupabaseUrl(e.target.value)}
+                        placeholder="https://sua-instancia.supabase.co"
+                        className="w-full text-xs font-mono px-3 py-2 bg-white border border-[#CBD5E1] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0284C7]"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-[#0F2B5C] block mb-1">
+                        Chave Pública Anon (Project Settings &gt; API &gt; anon public)
+                      </label>
+                      <textarea
+                        value={inputSupabaseKey}
+                        onChange={(e) => setInputSupabaseKey(e.target.value)}
+                        placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                        rows={2}
+                        className="w-full text-xs font-mono px-3 py-2 bg-white border border-[#CBD5E1] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#0284C7]"
+                        required
+                      />
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-2">
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow transition-all cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Salvar e Conectar Imediatamente</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingSupabaseConfig(false)}
+                        className="px-3 py-2 text-xs text-[#475569] hover:text-[#0F2B5C] font-bold cursor-pointer"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
+
+              {/* Guia para Configuração na Vercel */}
+              <div className="p-4 bg-sky-50 border border-sky-200 rounded-2xl space-y-2">
+                <h4 className="text-xs font-black text-[#0F2B5C] uppercase tracking-wider flex items-center gap-2">
+                  <span>ℹ️</span> Como configurar no Vite / Vercel (Produção Permanente)
+                </h4>
+                <div className="text-[11px] text-[#334155] space-y-1.5 leading-relaxed">
+                  <p>
+                    Se o seu projeto estiver hospedado na <strong>Vercel</strong>, as variáveis do Vite precisam começar com o prefixo <code>VITE_</code> para serem injetadas no navegador no momento do build:
                   </p>
+                  <ol className="list-decimal pl-5 space-y-1">
+                    <li>No painel da <strong>Vercel</strong>, acesse o seu projeto &gt; <strong>Settings</strong> &gt; <strong>Environment Variables</strong>.</li>
+                    <li>Crie a variável <code>VITE_SUPABASE_URL</code> com o valor da URL do seu projeto (ex: <code>https://seu-id.supabase.co</code>).</li>
+                    <li>Crie a variável <code>VITE_SUPABASE_ANON_KEY</code> com a sua chave pública <code>anon</code>.</li>
+                    <li><strong>IMPORTANTE:</strong> Faça um novo <strong>Deploy</strong> (ou clique em <em>Redeploy</em>) na Vercel para que o Vite compile essas chaves nos arquivos estáticos finais.</li>
+                  </ol>
                 </div>
               </div>
 
