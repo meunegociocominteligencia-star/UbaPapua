@@ -116,6 +116,7 @@ CREATE TABLE IF NOT EXISTS pedido_itens (
 -- Por padrão, como este é um sistema aberto de quiosque, ativamos acesso público de leitura e escrita.
 ALTER TABLE categorias ENABLE ROW LEVEL SECURITY;
 ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pedido_itens ENABLE ROW LEVEL SECURITY;
 
@@ -125,6 +126,9 @@ CREATE POLICY "Acesso público categorias" ON categorias FOR ALL USING (true) WI
 
 DROP POLICY IF EXISTS "Acesso público produtos" ON produtos;
 CREATE POLICY "Acesso público produtos" ON produtos FOR ALL USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Acesso público clientes" ON clientes;
+CREATE POLICY "Acesso público clientes" ON clientes FOR ALL USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS "Acesso público pedidos" ON pedidos;
 CREATE POLICY "Acesso público pedidos" ON pedidos FOR ALL USING (true) WITH CHECK (true);
@@ -232,3 +236,238 @@ INSERT INTO config_estabelecimento (id, nome, logo, telefone, endereco, taxa_ser
   (1, 'Moju Park', '/moju-park-logo.svg', '(91) 98765-4321', 'Parque Aquático Moju Park', 10, 'Bem-vindo ao Moju Park! Desfrute de momentos inesquecíveis no parque aquático. Faça seu pedido diretamente aqui!', 'Todos os dias, das 09h às 18h')
 ON CONFLICT (id) DO NOTHING;
 `;
+
+export const SQL_TABELA_USUARIOS_ADMIN = `-- SCRIPT EXCLUSIVO: TABELA USUARIOS_ADMIN
+-- Copie e execute este código no SQL Editor do Supabase se receber erro na tabela usuarios_admin:
+
+CREATE TABLE IF NOT EXISTS usuarios_admin (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome VARCHAR(255) NOT NULL,
+  usuario VARCHAR(100) UNIQUE NOT NULL,
+  senha VARCHAR(255) NOT NULL,
+  regra VARCHAR(50) DEFAULT 'garcom' NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE usuarios_admin ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Acesso público usuarios_admin" ON usuarios_admin;
+CREATE POLICY "Acesso público usuarios_admin" ON usuarios_admin FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO usuarios_admin (nome, usuario, senha, regra) VALUES
+  ('Administrador', 'admin', '123', 'admin'),
+  ('Garçom Padrão', 'garcom', '123', 'garcom')
+ON CONFLICT (usuario) DO NOTHING;
+`;
+
+export const SQL_TABELA_CONFIG_ESTABELECIMENTO = `-- SCRIPT EXCLUSIVO: TABELA CONFIG_ESTABELECIMENTO
+CREATE TABLE IF NOT EXISTS config_estabelecimento (
+  id INT PRIMARY KEY,
+  nome VARCHAR(255) NOT NULL,
+  logo TEXT NOT NULL,
+  telefone VARCHAR(100),
+  endereco TEXT,
+  taxa_servico DECIMAL(10,2) DEFAULT 10.00,
+  mensagem_inicial TEXT,
+  horario_funcionamento VARCHAR(255),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE config_estabelecimento ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Acesso público config_estabelecimento" ON config_estabelecimento;
+CREATE POLICY "Acesso público config_estabelecimento" ON config_estabelecimento FOR ALL USING (true) WITH CHECK (true);
+
+INSERT INTO config_estabelecimento (id, nome, logo, telefone, endereco, taxa_servico, mensagem_inicial, horario_funcionamento) VALUES
+  (1, 'Moju Park', '/moju-park-logo.svg', '(91) 98765-4321', 'Parque Aquático Moju Park', 10, 'Bem-vindo ao Moju Park!', 'Todos os dias, das 09h às 18h')
+ON CONFLICT (id) DO NOTHING;
+`;
+
+export interface TableDiagnosticResult {
+  tableName: string;
+  label: string;
+  description: string;
+  status: 'ok' | 'missing' | 'error' | 'unconfigured';
+  count: number;
+  message: string;
+  sqlSnippet: string;
+}
+
+export const SYSTEM_TABLES_META: { tableName: string; label: string; description: string; sqlSnippet: string }[] = [
+  {
+    tableName: 'categorias',
+    label: 'Categorias do Cardápio',
+    description: 'Armazena as divisões do menu (Refeições, Bebidas, Petiscos, etc.)',
+    sqlSnippet: `CREATE TABLE IF NOT EXISTS categorias (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome VARCHAR(100) NOT NULL UNIQUE
+);
+ALTER TABLE categorias ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acesso público categorias" ON categorias;
+CREATE POLICY "Acesso público categorias" ON categorias FOR ALL USING (true) WITH CHECK (true);`
+  },
+  {
+    tableName: 'produtos',
+    label: 'Produtos e Pratos',
+    description: 'Armazena itens com preço, descrição, foto, categoria e estoque',
+    sqlSnippet: `CREATE TABLE IF NOT EXISTS produtos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nome VARCHAR(255) NOT NULL,
+  descricao TEXT,
+  categoria VARCHAR(100) NOT NULL REFERENCES categorias(nome) ON UPDATE CASCADE,
+  preco DECIMAL(10,2) NOT NULL,
+  imagem TEXT,
+  ativo BOOLEAN DEFAULT TRUE,
+  ordem INT DEFAULT 0,
+  estoque INT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE produtos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acesso público produtos" ON produtos;
+CREATE POLICY "Acesso público produtos" ON produtos FOR ALL USING (true) WITH CHECK (true);`
+  },
+  {
+    tableName: 'clientes',
+    label: 'Clientes e Mesas',
+    description: 'Cadastro de clientes que abriram conta ou realizaram pedidos',
+    sqlSnippet: `CREATE TABLE IF NOT EXISTS clientes (
+  telefone VARCHAR(50) PRIMARY KEY,
+  nome VARCHAR(255) NOT NULL,
+  quiosque VARCHAR(50) NOT NULL,
+  celular VARCHAR(50),
+  status_conta VARCHAR(50) DEFAULT 'Conta Paga',
+  valor_total_conta DECIMAL(10,2) DEFAULT 0.00,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE clientes ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acesso público clientes" ON clientes;
+CREATE POLICY "Acesso público clientes" ON clientes FOR ALL USING (true) WITH CHECK (true);`
+  },
+  {
+    tableName: 'pedidos',
+    label: 'Pedidos Realizados',
+    description: 'Registros de vendas dos quiosques, balcão e garçom',
+    sqlSnippet: `CREATE TABLE IF NOT EXISTS pedidos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cliente_nome VARCHAR(255) NOT NULL,
+  cliente_telefone VARCHAR(50),
+  quiosque VARCHAR(50) NOT NULL,
+  status VARCHAR(50) DEFAULT 'Recebido' NOT NULL,
+  valor_total DECIMAL(10,2) NOT NULL,
+  taxa_servico DECIMAL(10,2) NOT NULL,
+  valor_final DECIMAL(10,2) NOT NULL,
+  observacoes TEXT,
+  conta_solicitada BOOLEAN DEFAULT FALSE,
+  pago BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+ALTER TABLE pedidos ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acesso público pedidos" ON pedidos;
+CREATE POLICY "Acesso público pedidos" ON pedidos FOR ALL USING (true) WITH CHECK (true);`
+  },
+  {
+    tableName: 'pedido_itens',
+    label: 'Itens dos Pedidos',
+    description: 'Itens individuais associados a cada pedido realizado',
+    sqlSnippet: `CREATE TABLE IF NOT EXISTS pedido_itens (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  pedido_id UUID REFERENCES pedidos(id) ON DELETE CASCADE,
+  produto_id VARCHAR(100) NOT NULL,
+  produto_nome VARCHAR(255) NOT NULL,
+  quantidade INT NOT NULL,
+  valor DECIMAL(10,2) NOT NULL
+);
+ALTER TABLE pedido_itens ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Acesso público pedido_itens" ON pedido_itens;
+CREATE POLICY "Acesso público pedido_itens" ON pedido_itens FOR ALL USING (true) WITH CHECK (true);`
+  },
+  {
+    tableName: 'usuarios_admin',
+    label: 'Equipe e Colaboradores (Admin/Garçom)',
+    description: 'Controle de acesso para administradores e garçons',
+    sqlSnippet: SQL_TABELA_USUARIOS_ADMIN
+  },
+  {
+    tableName: 'config_estabelecimento',
+    label: 'Configurações do Estabelecimento',
+    description: 'Nome, logo, taxa de serviço, mensagem de boas-vindas e horário',
+    sqlSnippet: SQL_TABELA_CONFIG_ESTABELECIMENTO
+  }
+];
+
+export async function checkAllSupabaseTables(): Promise<TableDiagnosticResult[]> {
+  const client = getSupabase();
+  if (!client || !hasSupabaseConfig) {
+    return SYSTEM_TABLES_META.map((t) => ({
+      tableName: t.tableName,
+      label: t.label,
+      description: t.description,
+      status: 'unconfigured',
+      count: 0,
+      message: 'Supabase não configurado ou desconectado',
+      sqlSnippet: t.sqlSnippet
+    }));
+  }
+
+  const results: TableDiagnosticResult[] = [];
+
+  for (const meta of SYSTEM_TABLES_META) {
+    try {
+      const { data, count, error } = await client
+        .from(meta.tableName)
+        .select('*', { count: 'exact', head: false })
+        .limit(1);
+
+      if (error) {
+        const isMissing = error.code === '42P01' ||
+          (error.message && (
+            error.message.toLowerCase().includes('does not exist') ||
+            error.message.toLowerCase().includes('relation') ||
+            error.message.toLowerCase().includes('not found')
+          ));
+        
+        const isPermission = error.code === '42501' ||
+          (error.message && error.message.toLowerCase().includes('row-level security'));
+
+        results.push({
+          tableName: meta.tableName,
+          label: meta.label,
+          description: meta.description,
+          status: isMissing ? 'missing' : 'error',
+          count: 0,
+          message: isMissing
+            ? 'Tabela não foi criada no banco de dados Supabase.'
+            : isPermission
+              ? 'Erro de RLS (permissão negada). Execute as políticas de RLS.'
+              : `Erro: ${error.message || error.code}`,
+          sqlSnippet: meta.sqlSnippet
+        });
+      } else {
+        // Table exists and query was successful
+        const total = typeof count === 'number' ? count : ((data as any)?.length ?? 0);
+        results.push({
+          tableName: meta.tableName,
+          label: meta.label,
+          description: meta.description,
+          status: 'ok',
+          count: total,
+          message: `Tabela ativa e acessível (${total} ${total === 1 ? 'registro' : 'registros'})`,
+          sqlSnippet: meta.sqlSnippet
+        });
+      }
+    } catch (err: any) {
+      results.push({
+        tableName: meta.tableName,
+        label: meta.label,
+        description: meta.description,
+        status: 'error',
+        count: 0,
+        message: `Falha na requisição: ${err.message || err}`,
+        sqlSnippet: meta.sqlSnippet
+      });
+    }
+  }
+
+  return results;
+}
+
